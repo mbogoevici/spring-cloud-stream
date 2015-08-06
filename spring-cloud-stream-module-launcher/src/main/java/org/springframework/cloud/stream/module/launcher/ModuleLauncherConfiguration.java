@@ -56,7 +56,9 @@ public class ModuleLauncherConfiguration {
 
 	@Bean
 	public ModuleLauncher moduleLauncher(ModuleResolver moduleResolver) {
-		return new ModuleLauncher(moduleResolver);
+		ModuleLauncher moduleLauncher = new ModuleLauncher(moduleResolver);
+		moduleLauncher.setAggregateOnLaunch(properties.isAggregateOnLaunch());
+		return moduleLauncher;
 	}
 
 }

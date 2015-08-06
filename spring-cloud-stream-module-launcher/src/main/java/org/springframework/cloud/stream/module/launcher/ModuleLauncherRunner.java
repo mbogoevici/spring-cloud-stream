@@ -41,8 +41,14 @@ public class ModuleLauncherRunner implements ApplicationRunner, InitializingBean
 
 	private String[] modules;
 
+	private boolean bindDirectly = true;
+
 	public void setModules(String[] modules) {
 		this.modules = modules;
+	}
+
+	public void setBindDirectly(boolean bindDirectly) {
+		this.bindDirectly = bindDirectly;
 	}
 
 	@Override

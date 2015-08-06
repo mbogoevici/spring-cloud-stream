@@ -21,7 +21,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.cloud.stream.annotation.EnableModule;
-import org.springframework.cloud.stream.utils.MessageChannelBeanDefinitionRegistryUtils;
+import org.springframework.cloud.stream.binding.BindingBeanDefinitionRegistryUtils;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
@@ -31,7 +31,7 @@ import org.springframework.util.MultiValueMap;
  * @author Marius Bogoevici
  * @author Dave Syer
  */
-public class ModuleRegistrar implements ImportBeanDefinitionRegistrar {
+public class BindingBeansRegistrar implements ImportBeanDefinitionRegistrar {
 
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata metadata,
@@ -39,8 +39,8 @@ public class ModuleRegistrar implements ImportBeanDefinitionRegistrar {
 		MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(
 				EnableModule.class.getName(), false);
 		for (Class<?> type : collectClasses(attributes.get("value"))) {
-			MessageChannelBeanDefinitionRegistryUtils.registerChannelBeanDefinitions(type, registry);
-			MessageChannelBeanDefinitionRegistryUtils.registerChannelsQualifiedBeanDefinitions(
+			BindingBeanDefinitionRegistryUtils.registerChannelBeanDefinitions(type, type.getName(), registry);
+			BindingBeanDefinitionRegistryUtils.registerChannelsQualifiedBeanDefinitions(
 					ClassUtils.resolveClassName(metadata.getClassName(), null), type,
 					registry);
 		}

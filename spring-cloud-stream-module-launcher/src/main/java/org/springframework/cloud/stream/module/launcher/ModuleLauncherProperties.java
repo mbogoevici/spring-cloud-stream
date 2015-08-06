@@ -30,6 +30,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ModuleLauncherProperties {
 
 	/**
+	 * True if aggregating multiple modules when launched together
+	 */
+	private boolean aggregateOnLaunch;
+
+	/**
 	 * File path to a locally available maven repository, where modules will be downloaded.
 	 */
 	private File localRepository = new File(System.getProperty("user.home")
@@ -39,6 +44,14 @@ public class ModuleLauncherProperties {
 	 * Location of comma separated remote maven repositories from which modules will be downloaded, if not available locally.
 	 */
 	private String[] remoteRepositories = new String[] {"https://repo.spring.io/libs-snapshot"};
+
+	public boolean isAggregateOnLaunch() {
+		return aggregateOnLaunch;
+	}
+
+	public void setAggregateOnLaunch(boolean aggregateOnLaunch) {
+		this.aggregateOnLaunch = aggregateOnLaunch;
+	}
 
 	public void setRemoteRepositories(String[] remoteRepositories) {
 		this.remoteRepositories = remoteRepositories;

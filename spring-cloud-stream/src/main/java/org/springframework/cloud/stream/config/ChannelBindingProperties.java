@@ -46,6 +46,8 @@ public class ChannelBindingProperties {
 
 	private Map<String,Object> bindings = new HashMap<>();
 
+	private String channelNamespace = "";
+
 	public Properties getConsumerProperties() {
 		return this.consumerProperties;
 	}
@@ -93,4 +95,11 @@ public class ChannelBindingProperties {
 		return "tap:" + getBindingPath(channelName);
 	}
 
+	public String getChannelNamespace() {
+		return channelNamespace;
+	}
+
+	public void setChannelNamespace(String channelNamespace) {
+		this.channelNamespace = channelNamespace;
+	}
 }
