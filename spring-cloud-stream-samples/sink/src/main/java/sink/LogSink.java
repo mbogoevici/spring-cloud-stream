@@ -20,7 +20,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.annotation.EnableModule;
 import org.springframework.cloud.stream.annotation.Sink;
+import org.springframework.context.annotation.Bean;
 import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.integration.config.EnableIntegration;
+import org.springframework.integration.config.GlobalChannelInterceptor;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.ChannelInterceptorAdapter;
 
 /**
  * @author Dave Syer
@@ -34,6 +41,23 @@ public class LogSink {
 	@ServiceActivator(inputChannel=Sink.INPUT)
 	public void loggerSink(Object payload) {
 		logger.info("Received: " + payload);
+	}
+
+	@GlobalChannelInterceptor @Bean
+	public ChannelInterceptor globalInterceptor() {
+		return new ChannelInterceptorAdapter() {
+			@Override
+			public boolean preReceive(MessageChannel channel) {
+				logger.info("PreReceive");
+				return super.preReceive(channel);
+			}
+
+			@Override
+			public Message<?> preSend(Message<?> message, MessageChannel channel) {
+				logger.info("PreSend");
+				return super.preSend(message, channel);
+			}
+		};
 	}
 
 }
