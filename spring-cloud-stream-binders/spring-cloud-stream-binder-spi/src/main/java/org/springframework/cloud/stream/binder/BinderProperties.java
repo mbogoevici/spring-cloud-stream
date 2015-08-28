@@ -67,6 +67,11 @@ public interface BinderProperties {
 	public static final String COUNT = "count";
 
 	/**
+	 * Whether the consumer should be consuming from a partition.
+	 */
+	public static final String PARTITIONED = "partitioned";
+
+	/**
 	 * The consumer's partition index.
 	 */
 	public static final String PARTITION_INDEX = "partitionIndex";

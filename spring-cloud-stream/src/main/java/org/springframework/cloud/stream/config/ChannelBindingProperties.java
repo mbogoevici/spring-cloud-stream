@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -35,13 +36,27 @@ public class ChannelBindingProperties {
 
 	public static final String PATH = "path";
 
+	@Value("${INSTANCE_INDEX:${CF_INSTANCE_INDEX:0}}")
+	private int instanceIndex;
+
 	private Properties consumerProperties = new Properties();
 
 	private Properties producerProperties = new Properties();
 
 	private Map<String,Object> bindings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
+	public void setInstanceIndex(int instanceIndex) {
+		this.instanceIndex = instanceIndex;
+	}
+
+	public int getInstanceIndex() {
+		return this.instanceIndex;
+	}
+
 	public Properties getConsumerProperties() {
+		if ("TRUE".equalsIgnoreCase(this.consumerProperties.getProperty("partitioned"))) {
+			this.consumerProperties.setProperty("partitionIndex", String.valueOf(this.instanceIndex));
+		}
 		return this.consumerProperties;
 	}
 

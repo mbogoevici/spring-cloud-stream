@@ -91,6 +91,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 	 */
 	private static final Set<Object> SUPPORTED_CONSUMER_PROPERTIES = new SetBuilder()
 			.addAll(SUPPORTED_NAMED_CONSUMER_PROPERTIES)
+			.add(BinderProperties.PARTITIONED)
 			.add(BinderProperties.PARTITION_INDEX)
 			.build();
 
