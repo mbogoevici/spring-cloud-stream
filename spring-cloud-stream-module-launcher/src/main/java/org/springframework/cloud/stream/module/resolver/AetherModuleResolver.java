@@ -47,7 +47,6 @@ import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
-import org.eclipse.aether.util.filter.PatternExclusionsDependencyFilter;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -111,13 +110,13 @@ public class AetherModuleResolver implements ModuleResolver {
 	/**
 	 * Resolve an artifact and return its location in the local repository. Aether performs the normal
 	 * Maven resolution process ensuring that the latest update is cached to the local repository.
-	 * @param root the Maven coordinates of the artifact
+	 * @param coordinates the Maven coordinates of the artifact
 	 * @return a {@ link FileSystemResource} representing the resolved artifact in the local repository
 	 * @throws a RuntimeException if the artifact does not exist or the resolution fails
 	 */
 	@Override
-	public Resource resolve(Coordinates root) {
-		return this.resolve(root, null, null)[0];
+	public Resource resolve(Coordinates coordinates) {
+		return this.resolve(new Coordinates[]{coordinates}, null, null)[0];
 	}
 
 	/*
@@ -149,17 +148,36 @@ public class AetherModuleResolver implements ModuleResolver {
 		return locator.getService(RepositorySystem.class);
 	}
 
+
+	/**
+	 * Resolve a set of artifacts based on their coordinates, including their dependencies, and return the locations of
+	 * the transitive set in the local repository. Aether performs the normal Maven resolution process ensuring that the
+	 * latest update is cached to the local repository. A number of additional includes and excludes can be specified,
+	 * allowing to override the transitive dependencies of the original set. Includes and their transitive dependencies
+	 * will always
+	 *
+	 * @param root the Maven coordinates of the artifact
+	 * @return a {@ link FileSystemResource} representing the resolved artifact in the local repository
+	 * @throws a RuntimeException if the artifact does not exist or the resolution fails
+	 */
 	@Override
-	public Resource[] resolve(Coordinates root, Coordinates[] includes, String[] excludePatterns) {
-		validateCoordinates(root);
-		for (Coordinates include : includes) {
-			validateCoordinates(include);
+	public Resource[] resolve(Coordinates[] coordinates, Coordinates[] includes, String[] excludePatterns) {
+		Assert.notEmpty(coordinates, "A list of root nodes must be provided");
+		for (Coordinates coordinate : coordinates) {
+			validateCoordinates(coordinate);
+		}
+		if (!ObjectUtils.isEmpty(includes)) {
+			for (Coordinates include : includes) {
+				validateCoordinates(include);
+			}
 		}
 		List<Resource> result = new ArrayList<>();
-		Artifact rootArtifact = toArtifact(root);
+		// if we only have one artifact to resolve, it will be set as root
+		Artifact rootArtifact = !ObjectUtils.isEmpty(coordinates) && coordinates.length == 1 ?
+				toArtifact(coordinates[0]) : null;
 		RepositorySystemSession session = newRepositorySystemSession(repositorySystem,
 				localRepository.getAbsolutePath());
-		if (ObjectUtils.isEmpty(includes) && ObjectUtils.isEmpty(excludePatterns)) {
+		if (rootArtifact != null && ObjectUtils.isEmpty(includes) && ObjectUtils.isEmpty(excludePatterns)) {
 			ArtifactResult resolvedArtifact;
 			try {
 				resolvedArtifact = repositorySystem.resolveArtifact(session,
@@ -173,15 +191,27 @@ public class AetherModuleResolver implements ModuleResolver {
 		else {
 			try {
 				CollectRequest collectRequest = new CollectRequest();
-				collectRequest.setRoot(new Dependency(rootArtifact, JavaScopes.RUNTIME));
-				for (Coordinates include : includes) {
-					collectRequest.addDependency(new Dependency(toArtifact(include), JavaScopes.RUNTIME));
-				}
 				collectRequest.setRepositories(remoteRepositories);
+				if (rootArtifact != null) {
+					collectRequest.setRoot(new Dependency(rootArtifact, JavaScopes.RUNTIME));
+				}
+				else {
+					collectRequest.setRoot(null);
+					for (Coordinates coordinate : coordinates) {
+						collectRequest.addDependency(new Dependency(toArtifact(coordinate), JavaScopes.RUNTIME));
+					}
+				}
+				Artifact[] includeArtifacts = new Artifact[ObjectUtils.isEmpty(includes) ? includes.length : 0];
+				int i = 0;
+				for (Coordinates include : includes) {
+					Artifact includedArtifact = toArtifact(include);
+					collectRequest.addDependency(new Dependency(includedArtifact, JavaScopes.RUNTIME));
+					includeArtifacts[i++] = includedArtifact;
+				}
 				DependencyResult dependencyResult =
 						repositorySystem.resolveDependencies(session,
 								new DependencyRequest(collectRequest,
-										new PatternExclusionsDependencyFilter(excludePatterns)));
+										new InclusionExclusionDependencyFilter(includeArtifacts, excludePatterns)));
 				for (ArtifactResult artifactResult : dependencyResult.getArtifactResults()) {
 					// we are only interested in the jars or zips
 					if ("jar".equalsIgnoreCase(artifactResult.getArtifact().getExtension())) {

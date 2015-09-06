@@ -37,16 +37,16 @@ public interface ModuleResolver {
 	Resource resolve(Coordinates coordinates);
 
 	/**
-	 * Retrieve a set of resources given its coordinates, along with additional dependencies.
+	 * Retrieve a set of resources given their coordinates, along with additional dependencies.
 	 * Exclusion rules patterns (conforming to {@link org.eclipse.aether.util.filter.PatternExclusionsDependencyFilter}
 	 * can be provided as well.
 	 *
-	 * @param root the coordinates of the main resource
+	 * @param coordinates the coordinates of the set of main resource
 	 * @param includes a list of coordinates to include along the main resource
 	 * @param excludePatterns a list of exclusion patterns
 	 * @see org.eclipse.aether.util.filter.PatternExclusionsDependencyFilter
 	 * @return the main resource and the additional dependencies
 	 */
-	Resource[] resolve(Coordinates root, Coordinates[] includes, String[] excludePatterns);
+	Resource[] resolve(Coordinates[] coordinates, Coordinates[] includes, String[] excludePatterns);
 
 }
