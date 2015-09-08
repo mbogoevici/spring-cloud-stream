@@ -209,6 +209,13 @@ public abstract class AbstractBinderPropertiesAccessor implements BinderProperti
 	// Partitioning
 
 	/**
+	 * Whether the binding is part of a partitioned stream
+	 */
+	public boolean isPartitioned() {
+		return getProperty(PARTITIONED, false);
+	}
+
+	/**
 	 * A class name for extracting partition keys from messages.
 	 * @return The class name,
 	 */

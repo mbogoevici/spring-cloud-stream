@@ -51,11 +51,11 @@ public class ChannelBindingService {
 				.getBindingTarget(inputChannelName);
 		if (isChannelPubSub(channelBindingTarget)) {
 			this.binder.bindPubSubConsumer(removePrefix(channelBindingTarget),
-					inputChannel, this.channelBindingProperties.getConsumerProperties());
+					inputChannel, this.channelBindingProperties.getConsumerProperties(inputChannelName));
 		}
 		else {
 			this.binder.bindConsumer(channelBindingTarget, inputChannel,
-					this.channelBindingProperties.getConsumerProperties());
+					this.channelBindingProperties.getConsumerProperties(inputChannelName));
 		}
 	}
 
@@ -64,11 +64,11 @@ public class ChannelBindingService {
 				.getBindingTarget(outputChannelName);
 		if (isChannelPubSub(channelBindingTarget)) {
 			this.binder.bindPubSubProducer(removePrefix(channelBindingTarget),
-					outputChannel, this.channelBindingProperties.getProducerProperties());
+					outputChannel, this.channelBindingProperties.getProducerProperties(outputChannelName));
 		}
 		else {
 			this.binder.bindProducer(channelBindingTarget, outputChannel,
-					this.channelBindingProperties.getProducerProperties());
+					this.channelBindingProperties.getProducerProperties(outputChannelName));
 		}
 	}
 
@@ -89,24 +89,5 @@ public class ChannelBindingService {
 
 	public void unbindProducers(String outputChannelName) {
 		this.binder.unbindProducers(outputChannelName);
-	}
-
-	public Properties getBindingConsumerProperties(String inputChannelName) {
-		if (channelBindingProperties.isPartitioned(inputChannelName)) {
-			Properties bindingConsumerProperties = new Properties();
-			if (channelBindingProperties.getConsumerProperties() == null) {
-				bindingConsumerProperties.putAll(channelBindingProperties.getConsumerProperties());
-			}
-			bindingConsumerProperties.put(BinderProperties.COUNT, channelBindingProperties.getInstanceCount());
-			bindingConsumerProperties.put(BinderProperties.PARTITION_INDEX,
-					channelBindingProperties.getInstanceIndex());
-			bindingConsumerProperties.put(BinderProperties.MIN_PARTITION_COUNT,
-					channelBindingProperties.getPartitionCount());
-			bindingConsumerProperties.put(BinderProperties.NEXT_MODULE_COUNT,
-					channelBindingProperties.getPartitionCount());
-		}
-		else {
-			return channelBindingProperties.getConsumerProperties();
-		}
 	}
 }

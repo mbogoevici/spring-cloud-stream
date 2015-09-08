@@ -22,6 +22,7 @@ import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.stream.binder.BinderProperties;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -47,27 +48,13 @@ public class ChannelBindingProperties {
 	@Value("${PARTITION_COUNT:1}")
 	private int partitionCount;
 
-	@Value("${INSTANCE_INDEX:${CF_INSTANCE_INDEX:0}}")
-	private int instanceIndex;
-
 	private Properties consumerProperties = new Properties();
 
 	private Properties producerProperties = new Properties();
 
 	private Map<String,Object> bindings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-	public void setInstanceIndex(int instanceIndex) {
-		this.instanceIndex = instanceIndex;
-	}
-
-	public int getInstanceIndex() {
-		return this.instanceIndex;
-	}
-
-	public Properties getConsumerProperties() {
-		if ("TRUE".equalsIgnoreCase(this.consumerProperties.getProperty("partitioned"))) {
-			this.consumerProperties.setProperty("partitionIndex", String.valueOf(this.instanceIndex));
-		}
+	private Properties getConsumerProperties() {
 		return this.consumerProperties;
 	}
 
@@ -155,5 +142,38 @@ public class ChannelBindingProperties {
 	public String getTapChannelName(String channelName) {
 		return "tap:" + getBindingTarget(channelName);
 	}
-	
+
+
+	public Properties getConsumerProperties(String inputChannelName) {
+		if (isPartitioned(inputChannelName)) {
+			Properties channelConsumerProperties = new Properties();
+			if (getConsumerProperties() == null) {
+				channelConsumerProperties.putAll(getConsumerProperties());
+			}
+			channelConsumerProperties.put(BinderProperties.COUNT, getInstanceCount());
+			channelConsumerProperties.put(BinderProperties.PARTITION_INDEX, getInstanceIndex());
+			channelConsumerProperties.put(BinderProperties.PARTITIONED, true);
+			return channelConsumerProperties;
+		}
+		else {
+			return getConsumerProperties();
+		}
+	}
+
+	public Properties getProducerProperties(String outputChannelName) {
+		if (isPartitioned(outputChannelName)) {
+			Properties channelProducerProperties = new Properties();
+			if (getProducerProperties() == null) {
+				channelProducerProperties.putAll(getConsumerProperties());
+			}
+			channelProducerProperties.put(BinderProperties.MIN_PARTITION_COUNT, getPartitionCount());
+			channelProducerProperties.put(BinderProperties.NEXT_MODULE_COUNT, getPartitionCount());
+			channelProducerProperties.put(BinderProperties.PARTITIONED, true);
+			return channelProducerProperties;
+		}
+		else {
+			return getProducerProperties();
+		}
+	}
+
 }
