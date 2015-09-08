@@ -16,14 +16,19 @@
 
 package org.springframework.cloud.stream.binding;
 
+import java.util.Properties;
+
 import org.springframework.cloud.stream.binder.Binder;
+import org.springframework.cloud.stream.binder.BinderProperties;
 import org.springframework.cloud.stream.config.ChannelBindingProperties;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Handles the binding of input/output channels by delegating to an underlying {@link Binder}.
+ * Handles the binding of input/output channels by delegating to an underlying
+ * {@link Binder}.
  *
  * @author Mark Fisher
  * @author Dave Syer
@@ -36,18 +41,17 @@ public class ChannelBindingService {
 	private ChannelBindingProperties channelBindingProperties;
 
 	public ChannelBindingService(ChannelBindingProperties channelBindingProperties,
-															 Binder<MessageChannel> binder) {
+			Binder<MessageChannel> binder) {
 		this.channelBindingProperties = channelBindingProperties;
 		this.binder = binder;
 	}
 
-
 	public void bindConsumer(MessageChannel inputChannel, String inputChannelName) {
 		String channelBindingTarget = this.channelBindingProperties
-				.getBindingPath(inputChannelName);
+				.getBindingTarget(inputChannelName);
 		if (isChannelPubSub(channelBindingTarget)) {
-			this.binder.bindPubSubConsumer(removePrefix(channelBindingTarget), inputChannel,
-					this.channelBindingProperties.getConsumerProperties());
+			this.binder.bindPubSubConsumer(removePrefix(channelBindingTarget),
+					inputChannel, this.channelBindingProperties.getConsumerProperties());
 		}
 		else {
 			this.binder.bindConsumer(channelBindingTarget, inputChannel,
@@ -57,10 +61,10 @@ public class ChannelBindingService {
 
 	public void bindProducer(MessageChannel outputChannel, String outputChannelName) {
 		String channelBindingTarget = this.channelBindingProperties
-				.getBindingPath(outputChannelName);
+				.getBindingTarget(outputChannelName);
 		if (isChannelPubSub(channelBindingTarget)) {
-			this.binder.bindPubSubProducer(removePrefix(channelBindingTarget), outputChannel,
-					this.channelBindingProperties.getProducerProperties());
+			this.binder.bindPubSubProducer(removePrefix(channelBindingTarget),
+					outputChannel, this.channelBindingProperties.getProducerProperties());
 		}
 		else {
 			this.binder.bindProducer(channelBindingTarget, outputChannel,
@@ -75,19 +79,34 @@ public class ChannelBindingService {
 	}
 
 	private String removePrefix(String bindingTarget) {
-		Assert.isTrue(StringUtils.hasText(bindingTarget),
-				"Binding target should not be empty/null.");
+		Assert.isTrue(StringUtils.hasText(bindingTarget), "Binding target should not be empty/null.");
 		return bindingTarget.substring(bindingTarget.indexOf(":") + 1);
 	}
 
 	public void unbindConsumers(String inputChannelName) {
-		this.binder.unbindConsumers
-				(inputChannelName);
+		this.binder.unbindConsumers(inputChannelName);
 	}
 
 	public void unbindProducers(String outputChannelName) {
 		this.binder.unbindProducers(outputChannelName);
 	}
 
-
+	public Properties getBindingConsumerProperties(String inputChannelName) {
+		if (channelBindingProperties.isPartitioned(inputChannelName)) {
+			Properties bindingConsumerProperties = new Properties();
+			if (channelBindingProperties.getConsumerProperties() == null) {
+				bindingConsumerProperties.putAll(channelBindingProperties.getConsumerProperties());
+			}
+			bindingConsumerProperties.put(BinderProperties.COUNT, channelBindingProperties.getInstanceCount());
+			bindingConsumerProperties.put(BinderProperties.PARTITION_INDEX,
+					channelBindingProperties.getInstanceIndex());
+			bindingConsumerProperties.put(BinderProperties.MIN_PARTITION_COUNT,
+					channelBindingProperties.getPartitionCount());
+			bindingConsumerProperties.put(BinderProperties.NEXT_MODULE_COUNT,
+					channelBindingProperties.getPartitionCount());
+		}
+		else {
+			return channelBindingProperties.getConsumerProperties();
+		}
+	}
 }

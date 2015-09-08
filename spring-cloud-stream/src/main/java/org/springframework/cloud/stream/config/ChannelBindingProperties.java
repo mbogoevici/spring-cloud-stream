@@ -34,7 +34,18 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 @JsonInclude(Include.NON_DEFAULT)
 public class ChannelBindingProperties {
 
-	public static final String PATH = "path";
+	public static final String TARGET = "target";
+
+	public static final String PARTITIONED = "partitioned";
+
+	@Value("${INSTANCE_INDEX:${CF_INSTANCE_INDEX:0}}")
+	private int instanceIndex;
+
+	@Value("${INSTANCE_COUNT:1}")
+	private int instanceCount;
+
+	@Value("${PARTITION_COUNT:1}")
+	private int partitionCount;
 
 	@Value("${INSTANCE_INDEX:${CF_INSTANCE_INDEX:0}}")
 	private int instanceIndex;
@@ -80,7 +91,32 @@ public class ChannelBindingProperties {
 		this.bindings = bindings;
 	}
 
-	public String getBindingPath(String channelName) {
+
+	public int getInstanceIndex() {
+		return instanceIndex;
+	}
+
+	public void setInstanceIndex(int instanceIndex) {
+		this.instanceIndex = instanceIndex;
+	}
+
+	public int getInstanceCount() {
+		return instanceCount;
+	}
+
+	public void setInstanceCount(int instanceCount) {
+		this.instanceCount = instanceCount;
+	}
+
+	public int getPartitionCount() {
+		return partitionCount;
+	}
+
+	public void setPartitionCount(int partitionCount) {
+		this.partitionCount = partitionCount;
+	}
+
+	public String getBindingTarget(String channelName) {
 		Object binding = bindings.get(channelName);
 		// we may shortcut directly to the path
 		if (binding != null) {
@@ -89,7 +125,7 @@ public class ChannelBindingProperties {
 			}
 			else if (binding instanceof Map) {
 				Map<?, ?> bindingProperties = (Map<?, ?>) binding;
-				Object bindingPath = bindingProperties.get(PATH);
+				Object bindingPath = bindingProperties.get(TARGET);
 				if (bindingPath != null) {
 					return bindingPath.toString();
 				}
@@ -99,8 +135,25 @@ public class ChannelBindingProperties {
 		return channelName;
 	}
 
+	public boolean isPartitioned(String channelName) {
+		Object binding = bindings.get(channelName);
+		// if the setting is just a target shortcut
+		if (binding == null || binding instanceof String) {
+			return false;
+		}
+		else if (binding instanceof Map) {
+			Map<?, ?> bindingProperties = (Map<?, ?>) binding;
+			Object bindingPath = bindingProperties.get(PARTITIONED);
+			if (bindingPath != null) {
+				return Boolean.valueOf(bindingPath.toString());
+			}
+		}
+		// just return the channel name if not found
+		return false;
+	}
+
 	public String getTapChannelName(String channelName) {
-		return "tap:" + getBindingPath(channelName);
+		return "tap:" + getBindingTarget(channelName);
 	}
 	
 }
