@@ -37,16 +37,13 @@ public class ChannelBindingProperties {
 
 	public static final String TARGET = "target";
 
-	public static final String PARTITIONED = "partitioned";
+	public static final String PARTITION_COUNT = "partitionCount";
 
 	@Value("${INSTANCE_INDEX:${CF_INSTANCE_INDEX:0}}")
 	private int instanceIndex;
 
 	@Value("${INSTANCE_COUNT:1}")
 	private int instanceCount;
-
-	@Value("${PARTITION_COUNT:1}")
-	private int partitionCount;
 
 	private Properties consumerProperties = new Properties();
 
@@ -95,13 +92,6 @@ public class ChannelBindingProperties {
 		this.instanceCount = instanceCount;
 	}
 
-	public int getPartitionCount() {
-		return partitionCount;
-	}
-
-	public void setPartitionCount(int partitionCount) {
-		this.partitionCount = partitionCount;
-	}
 
 	public String getBindingTarget(String channelName) {
 		Object binding = bindings.get(channelName);
@@ -122,7 +112,24 @@ public class ChannelBindingProperties {
 		return channelName;
 	}
 
-	public boolean isPartitioned(String channelName) {
+	public int getPartitionCount(String channelName) {
+		Object binding = bindings.get(channelName);
+		// we may shortcut directly to the path
+		if (binding instanceof Map) {
+			try {
+				Map<?, ?> bindingProperties = (Map<?, ?>) binding;
+				Object bindingPath = bindingProperties.get(PARTITION_COUNT);
+				if (bindingPath != null) {
+					return Integer.parseInt(bindingPath.toString());
+				}
+			} catch (NumberFormatException e) {
+				// ignore and just return 1
+			}
+		}
+		return 1;
+	}
+
+	public boolean isPartitionedConsumer(String channelName) {
 		Object binding = bindings.get(channelName);
 		// if the setting is just a target shortcut
 		if (binding == null || binding instanceof String) {
@@ -130,12 +137,25 @@ public class ChannelBindingProperties {
 		}
 		else if (binding instanceof Map) {
 			Map<?, ?> bindingProperties = (Map<?, ?>) binding;
-			Object bindingPath = bindingProperties.get(PARTITIONED);
+			Object bindingPath = bindingProperties.get(BinderProperties.PARTITIONED);
 			if (bindingPath != null) {
 				return Boolean.valueOf(bindingPath.toString());
 			}
 		}
 		// just return the channel name if not found
+		return false;
+	}
+
+	public boolean isPartitionedProducer(String channelName) {
+		Object binding = bindings.get(channelName);
+		// if the setting is just a target shortcut
+		if (binding == null || binding instanceof String) {
+			return false;
+		}
+		else if (binding instanceof Map) {
+			Map<?, ?> bindingProperties = (Map<?, ?>) binding;
+			return bindingProperties.get(BinderProperties.PARTITION_KEY_EXPRESSION) != null || bindingProperties.get(BinderProperties.PARTITION_KEY_EXTRACTOR_CLASS) != null;
+		}
 		return false;
 	}
 
@@ -145,14 +165,14 @@ public class ChannelBindingProperties {
 
 
 	public Properties getConsumerProperties(String inputChannelName) {
-		if (isPartitioned(inputChannelName)) {
+		if (isPartitionedConsumer(inputChannelName)) {
 			Properties channelConsumerProperties = new Properties();
-			if (getConsumerProperties() == null) {
-				channelConsumerProperties.putAll(getConsumerProperties());
+			if (consumerProperties != null) {
+				channelConsumerProperties.putAll(consumerProperties);
 			}
-			channelConsumerProperties.put(BinderProperties.COUNT, getInstanceCount());
-			channelConsumerProperties.put(BinderProperties.PARTITION_INDEX, getInstanceIndex());
-			channelConsumerProperties.put(BinderProperties.PARTITIONED, true);
+			channelConsumerProperties.setProperty(BinderProperties.COUNT, Integer.toString(getInstanceCount()));
+			channelConsumerProperties.setProperty(BinderProperties.PARTITION_INDEX, Integer.toString(getInstanceIndex()));
+			channelConsumerProperties.setProperty(BinderProperties.PARTITIONED, "true");
 			return channelConsumerProperties;
 		}
 		else {
@@ -161,18 +181,30 @@ public class ChannelBindingProperties {
 	}
 
 	public Properties getProducerProperties(String outputChannelName) {
-		if (isPartitioned(outputChannelName)) {
+		if (isPartitionedProducer(outputChannelName)) {
 			Properties channelProducerProperties = new Properties();
-			if (getProducerProperties() == null) {
-				channelProducerProperties.putAll(getConsumerProperties());
+			if (this.producerProperties != null) {
+				channelProducerProperties.putAll(this.producerProperties);
 			}
-			channelProducerProperties.put(BinderProperties.MIN_PARTITION_COUNT, getPartitionCount());
-			channelProducerProperties.put(BinderProperties.NEXT_MODULE_COUNT, getPartitionCount());
-			channelProducerProperties.put(BinderProperties.PARTITIONED, true);
+			channelProducerProperties.put(BinderProperties.MIN_PARTITION_COUNT, Integer.toString(getPartitionCount(outputChannelName)));
+			channelProducerProperties.setProperty(BinderProperties.NEXT_MODULE_COUNT,
+					Integer.toString(getPartitionCount(outputChannelName)));
+			copyChannelBindingProperty(outputChannelName, channelProducerProperties, BinderProperties.PARTITION_KEY_EXPRESSION);
+			copyChannelBindingProperty(outputChannelName, channelProducerProperties, BinderProperties.PARTITION_KEY_EXTRACTOR_CLASS);
+			copyChannelBindingProperty(outputChannelName, channelProducerProperties, BinderProperties.PARTITION_SELECTOR_CLASS);
+			copyChannelBindingProperty(outputChannelName, channelProducerProperties, BinderProperties.PARTITION_SELECTOR_EXPRESSION);
 			return channelProducerProperties;
 		}
 		else {
-			return getProducerProperties();
+			return this.producerProperties;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void copyChannelBindingProperty(String outputChannelName, Properties targetProperties, String propertyName) {
+		Map<String, Object> channelBindingProperties = (Map<String, Object>) bindings.get(outputChannelName);
+		if (null != channelBindingProperties && channelBindingProperties.containsKey(propertyName)) {
+			targetProperties.setProperty(propertyName, (String) channelBindingProperties.get(propertyName));
 		}
 	}
 
