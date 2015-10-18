@@ -47,6 +47,8 @@ public class BindingProperties {
 
 	private String contentType;
 
+	private String transport;
+
 	public String getDestination() {
 		return this.destination;
 	}
@@ -119,4 +121,11 @@ public class BindingProperties {
 		this.contentType = contentType;
 	}
 
+	public String getTransport() {
+		return transport;
+	}
+
+	public void setTransport(String transport) {
+		this.transport = transport;
+	}
 }

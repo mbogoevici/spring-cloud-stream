@@ -48,7 +48,7 @@ public class ChannelBindingServiceProperties {
 
 	private Map<String, BindingProperties> bindings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-	private Properties getConsumerProperties() {
+	public Properties getConsumerProperties() {
 		return this.consumerProperties;
 	}
 
@@ -172,6 +172,13 @@ public class ChannelBindingServiceProperties {
 		else {
 			return this.producerProperties;
 		}
+	}
+
+	public String getTransport(String channelName) {
+		if (!bindings.containsKey(channelName)) {
+			return null;
+		}
+		return bindings.get(channelName).getTransport();
 	}
 
 }

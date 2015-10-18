@@ -28,10 +28,13 @@ import org.springframework.boot.test.IntegrationTest;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.Bindings;
+import org.springframework.cloud.stream.binder.BinderFactory;
 import org.springframework.cloud.stream.messaging.Processor;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
+import org.springframework.cloud.stream.test.binder.TestSupportBinder;
 import org.springframework.integration.annotation.Transformer;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -51,14 +54,14 @@ public class ExampleTest {
 	private Processor processor;
 
 	@Autowired
-	private MessageCollector messageCollector;
+	private BinderFactory<MessageChannel> binderFactory;
 
 	@Test
 	@SuppressWarnings("unchecked")
 	public void testWiring() {
 		Message<String> message = new GenericMessage<>("hello");
 		processor.input().send(message);
-		Message<String> received = (Message<String>) messageCollector.forChannel(processor.output()).poll();
+		Message<String> received = (Message<String>) ((TestSupportBinder) binderFactory.getBinder(null)).messageCollector().forChannel(processor.output()).poll();
 		assertThat(received.getPayload(), equalTo("hello world"));
 	}
 
