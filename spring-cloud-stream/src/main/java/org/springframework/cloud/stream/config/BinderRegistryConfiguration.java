@@ -16,17 +16,29 @@
 
 package org.springframework.cloud.stream.config;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.cloud.stream.binder.BinderConfiguration;
 import org.springframework.cloud.stream.binder.BinderConfigurationRegistry;
 import org.springframework.cloud.stream.binder.BinderTypeRegistry;
 import org.springframework.cloud.stream.binder.DefaultBinderConfigurationRegistry;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.Assert;
 
 /**
@@ -37,26 +49,70 @@ public class BinderRegistryConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(BinderConfigurationRegistry.class)
-	@ConditionalOnExpression(value = "!T(org.springframework.util.CollectionUtils).isEmpty(${spring.cloud.stream.binders:null})")
+	@ConditionalOnPrefix("spring.cloud.stream.binders")
 	public BinderConfigurationRegistry binderConfigurationRegistry(BinderTypeRegistry binderTypeRegistry,
 	                                                               ChannelBindingServiceProperties channelBindingServiceProperties) {
 		Map<String, BinderConfiguration> binderConfigurations = new HashMap<>();
 		for (Map.Entry<String, BinderProperties> binderEntry :
 				channelBindingServiceProperties.getBinders().entrySet()) {
+			BinderProperties binderProperties = binderEntry.getValue();
 			if (binderTypeRegistry.get(binderEntry.getKey()) != null) {
 				binderConfigurations.put(binderEntry.getKey(),
 						new BinderConfiguration(binderTypeRegistry.get(binderEntry.getKey()),
-								binderEntry.getValue().getProperties()));
+								binderProperties.getProperties()));
 			}
 			else {
-				Assert.hasText(binderEntry.getValue().getType(), "No 'type' property present for custom " +
+				Assert.hasText(binderProperties.getType(), "No 'type' property present for custom " +
 						"binder " + binderEntry.getKey());
 				binderConfigurations.put(binderEntry.getKey(),
-						new BinderConfiguration(binderTypeRegistry.get(binderEntry.getValue().getType()),
-								binderEntry.getValue().getProperties()));
+						new BinderConfiguration(binderTypeRegistry.get(binderProperties.getType()),
+								binderProperties.getProperties()));
 			}
 		}
 		return new DefaultBinderConfigurationRegistry(binderConfigurations);
+	}
+
+	@Conditional(PrefixCondition.class)
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target({ ElementType.TYPE, ElementType.METHOD })
+	public @interface ConditionalOnPrefix {
+
+		String value() default "";
+
+		boolean present() default true;
+	}
+
+	public static class PrefixCondition extends SpringBootCondition {
+
+		@Override
+		public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+			String configuredPrefix = (String) metadata
+					.getAnnotationAttributes(ConditionalOnPrefix.class.getName())
+					.get("value");
+			Boolean checkForPresence = (Boolean) metadata
+					.getAnnotationAttributes(ConditionalOnPrefix.class.getName())
+					.get("checkForPresence");
+			if (checkForPresence == null) {
+				checkForPresence = false;
+			}
+			String prefix = context.getEnvironment().resolvePlaceholders(configuredPrefix);
+			if (!ConfigurableEnvironment.class.isAssignableFrom(context.getEnvironment().getClass())) {
+				return ConditionOutcome.noMatch("Cannot scan environment, not a ConfigurableEnvironment instance");
+			}
+			ConfigurableEnvironment environment = (ConfigurableEnvironment) context.getEnvironment();
+			for (PropertySource<?> propertySource : environment.getPropertySources()) {
+				if (propertySource instanceof EnumerablePropertySource) {
+					for (String propertyName : ((EnumerablePropertySource<?>) propertySource).getPropertyNames()) {
+						if (propertyName.startsWith(prefix)) {
+							String message = "Found: " + propertyName;
+							return checkForPresence ? ConditionOutcome.match(message) : ConditionOutcome.noMatch(message);
+						}
+					}
+				}
+			}
+			String message = "Not found";
+			return checkForPresence ? ConditionOutcome.noMatch(message) : ConditionOutcome.match(message);
+		}
 	}
 }
 

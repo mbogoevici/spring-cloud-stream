@@ -184,11 +184,11 @@ public class ChannelBindingServiceProperties {
 		}
 	}
 
-	public String getTransport(String channelName) {
+	public String getBinder(String channelName) {
 		if (!bindings.containsKey(channelName)) {
 			return null;
 		}
-		return bindings.get(channelName).getTransport();
+		return bindings.get(channelName).getBinder();
 	}
 
 }

@@ -48,7 +48,7 @@ public class ChannelBindingService {
 
 	public void bindConsumer(MessageChannel inputChannel, String inputChannelName) {
 		String channelBindingTarget = this.channelBindingServiceProperties.getBindingDestination(inputChannelName);
-		String transport = this.channelBindingServiceProperties.getTransport(inputChannelName);
+		String transport = this.channelBindingServiceProperties.getBinder(inputChannelName);
 		Binder<MessageChannel> binder = binderRegistry.getBinder(transport);
 		if (BinderUtils.isChannelPubSub(channelBindingTarget)) {
 			BindingProperties bindingProperties = this.channelBindingServiceProperties.getBindings()
@@ -66,7 +66,7 @@ public class ChannelBindingService {
 
 	public void bindProducer(MessageChannel outputChannel, String outputChannelName) {
 		String channelBindingTarget = this.channelBindingServiceProperties.getBindingDestination(outputChannelName);
-		String transport = this.channelBindingServiceProperties.getTransport(outputChannelName);
+		String transport = this.channelBindingServiceProperties.getBinder(outputChannelName);
 		Binder<MessageChannel> binder = binderRegistry.getBinder(transport);
 		if (BinderUtils.isChannelPubSub(channelBindingTarget)) {
 			binder.bindPubSubProducer(removePrefix(channelBindingTarget),
@@ -84,13 +84,13 @@ public class ChannelBindingService {
 	}
 
 	public void unbindConsumers(String inputChannelName) {
-		String transport = this.channelBindingServiceProperties.getTransport(inputChannelName);
+		String transport = this.channelBindingServiceProperties.getBinder(inputChannelName);
 		Binder<MessageChannel> binder = binderRegistry.getBinder(transport);
 		binder.unbindConsumers(inputChannelName);
 	}
 
 	public void unbindProducers(String outputChannelName) {
-		String transport = this.channelBindingServiceProperties.getTransport(outputChannelName);
+		String transport = this.channelBindingServiceProperties.getBinder(outputChannelName);
 		Binder<MessageChannel> binder = binderRegistry.getBinder(transport);
 		binder.unbindProducers(outputChannelName);
 	}

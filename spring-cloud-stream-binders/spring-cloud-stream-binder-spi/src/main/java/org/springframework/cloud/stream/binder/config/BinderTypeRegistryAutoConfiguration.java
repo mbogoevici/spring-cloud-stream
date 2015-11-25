@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.stream.binder.BinderConfiguration;
@@ -35,6 +36,7 @@ import org.springframework.cloud.stream.binder.BinderTypeRegistry;
 import org.springframework.cloud.stream.binder.DefaultBinderConfigurationRegistry;
 import org.springframework.cloud.stream.binder.DefaultBinderRegistry;
 import org.springframework.cloud.stream.binder.DefaultBinderTypeRegistry;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -49,9 +51,10 @@ import org.springframework.util.StringUtils;
  * @author Marius Bogoevici
  */
 @Configuration
-@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
 public class BinderTypeRegistryAutoConfiguration {
 
+	@Autowired
+	ConfigurableApplicationContext configurableApplicationContext;
 
 	@Bean
 	@ConditionalOnMissingBean(BinderRegistry.class)
@@ -75,19 +78,19 @@ public class BinderTypeRegistryAutoConfiguration {
 	@ConditionalOnMissingBean(BinderTypeRegistry.class)
 	public BinderTypeRegistry binderTypeRegistry() {
 		Map<String, BinderType> binderTypes = new HashMap<>();
-		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		ClassLoader classLoader = configurableApplicationContext.getClassLoader();
 		if (classLoader == null) {
 			classLoader = BinderTypeRegistryAutoConfiguration.class.getClassLoader();
 		}
 		try {
-			Enumeration<URL> springBindersUrls = classLoader.getResources("META-INF/spring.binders");
-			if (springBindersUrls == null) {
-				throw new BeanCreationException("Cannot create binder factory, `META-INF/spring.binders` " +
+			Enumeration<URL> resources = classLoader.getResources("META-INF/spring.binders");
+			if (resources == null || !resources.hasMoreElements()) {
+				throw new BeanCreationException("Cannot create binder factory, no `META-INF/spring.binders` " +
 						"resources found on the classpath");
 			}
-			while (springBindersUrls.hasMoreElements()) {
-				URL springBindersUrl = springBindersUrls.nextElement();
-				UrlResource resource = new UrlResource(springBindersUrl);
+			while (resources.hasMoreElements()) {
+				URL url = resources.nextElement();
+				UrlResource resource = new UrlResource(url);
 				for (BinderType binderType : parseBinderConfigurations(classLoader, resource)) {
 					binderTypes.put(binderType.getDefaultName(), binderType);
 				}
@@ -117,6 +120,5 @@ public class BinderTypeRegistryAutoConfiguration {
 		}
 		return parsedBinderConfigurations;
 	}
-
 
 }

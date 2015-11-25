@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.stream.binder;
 
+import java.util.Arrays;
+
 /**
  * @author Marius Bogoevici
  */
@@ -36,5 +38,28 @@ public class BinderType {
 
 	public Class<?>[] getConfigurationClasses() {
 		return configurationClasses;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		BinderType that = (BinderType) o;
+		if (!defaultName.equals(that.defaultName)) {
+			return false;
+		}
+		return Arrays.equals(configurationClasses, that.configurationClasses);
+
+	}
+
+	@Override
+	public int hashCode() {
+		int result = defaultName.hashCode();
+		result = 31 * result + Arrays.hashCode(configurationClasses);
+		return result;
 	}
 }

@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.Banner.Mode;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -83,12 +84,13 @@ public class DefaultBinderRegistry<T> implements BinderRegistry<T>, DisposableBe
 				binderConfiguration = binderConfigurations.get(configurationName);
 			}
 			if (binderConfiguration == null) {
-				throw new IllegalStateException("Unknown binder configuration:" + configurationName);
+				throw new IllegalStateException("Unknown binder configuration: " + configurationName);
 			}
 			Properties binderProperties = binderConfiguration.getProperties();
 			Properties defaultProperties = binderProperties == null ? new Properties() : binderProperties;
 			SpringApplicationBuilder springApplicationBuilder =
 					new SpringApplicationBuilder(binderConfiguration.getBinderType().getConfigurationClasses())
+							.sources(SeedConfiguration.class)
 							.bannerMode(Mode.OFF)
 							.properties(defaultProperties)
 							.web(false);
@@ -100,6 +102,11 @@ public class DefaultBinderRegistry<T> implements BinderRegistry<T>, DisposableBe
 			binderInstanceCache.put(configurationName, new BinderInstanceHolder<>(binder, binderProducingContext));
 		}
 		return binderInstanceCache.get(configurationName).getBinderInstance();
+	}
+
+	@EnableAutoConfiguration
+	public static class SeedConfiguration {
+
 	}
 
 	static class BinderInstanceHolder<T> {
