@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.stream.binder;
 
+import java.util.Properties;
+
 /**
  * References one or more {@link org.springframework.context.annotation.Configuration}-annotated classes that
  * provide a context definition which contains exactly one {@link Binder}.
@@ -24,25 +26,24 @@ package org.springframework.cloud.stream.binder;
  */
 public class BinderConfiguration {
 
-	private String name;
+	private BinderType binderType;
 
-	private Class<?> configuration[];
+	private final Properties properties;
 
 	/**
-	 *
-	 * @param name a name for configuration (unique among a set of multiple instances)
-	 * @param configuration the binder configuration
+	 * @param binderType the binder type used by this configuration
+	 * @param properties the properties for setting up the binder
 	 */
-	public BinderConfiguration(String name, Class<?>[] configuration) {
-		this.name = name;
-		this.configuration = configuration;
+	public BinderConfiguration(BinderType binderType, Properties properties) {
+		this.binderType = binderType;
+		this.properties = properties;
 	}
 
-	public String getName() {
-		return name;
+	public BinderType getBinderType() {
+		return binderType;
 	}
 
-	public Class<?>[] getConfiguration() {
-		return configuration;
+	public Properties getProperties() {
+		return properties;
 	}
 }

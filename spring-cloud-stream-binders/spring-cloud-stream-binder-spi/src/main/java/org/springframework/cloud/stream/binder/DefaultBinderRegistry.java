@@ -22,38 +22,31 @@ import java.util.Properties;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.cloud.stream.binder.config.SeedConfiguration;
-import org.springframework.cloud.stream.binder.config.TransportSpec;
-import org.springframework.cloud.stream.binder.config.TransportSpec.TransportConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
  * @author Marius Bogoevici
  */
-public class DefaultBinderFactory<T> implements BinderFactory<T>, DisposableBean,ApplicationContextAware {
+public class DefaultBinderRegistry<T> implements BinderRegistry<T>, DisposableBean, ApplicationContextAware {
 
-	private final Map<String,BinderConfiguration> binderConfigurations;
+	private final Map<String, BinderConfiguration> binderConfigurations;
 
 	private ConfigurableApplicationContext applicationContext;
 
-	@Autowired
-	private TransportSpec transportSpec;
+	private Map<String, BinderInstanceHolder<T>> binderInstanceCache = new HashMap<>();
 
-	private Map<String,BinderInstanceHolder<T>> binderInstanceCache = new HashMap<>();
-
-	public DefaultBinderFactory(Map<String, BinderConfiguration> binderConfigurations) {
-		this.binderConfigurations = binderConfigurations;
+	public DefaultBinderRegistry(Map<String, BinderConfiguration> binderConfigurations) {
+		this.binderConfigurations = new HashMap<>(binderConfigurations);
 	}
 
 	@Override
-	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+	public void setApplicationContext(ApplicationContext applicationContext)
+			throws BeansException {
 		this.applicationContext = (ConfigurableApplicationContext) applicationContext;
 	}
 
@@ -71,40 +64,35 @@ public class DefaultBinderFactory<T> implements BinderFactory<T>, DisposableBean
 			configurationName = "";
 		}
 		if (!binderInstanceCache.containsKey(configurationName)) {
-			BinderConfiguration binderConfiguration = null;
+			BinderConfiguration binderConfiguration;
 			if (StringUtils.isEmpty(configurationName)) {
-				if (binderConfigurations.size() == 1) {
+				if (binderConfigurations.size() == 0) {
+					throw new IllegalStateException(
+							"A default binder has been requested, but there there is no binder available");
+				}
+				else if (binderConfigurations.size() == 1) {
 					binderConfiguration = binderConfigurations.values().iterator().next();
 				}
 				else {
-					throw new IllegalStateException("A default binder has been requested, but there is more than one " +
-							"binder available");
+					throw new IllegalStateException(
+							"A default binder has been requested, but there is more than one binder available: "
+									+ StringUtils.collectionToCommaDelimitedString(binderConfigurations.keySet()));
 				}
 			}
 			else {
 				binderConfiguration = binderConfigurations.get(configurationName);
 			}
-			Properties binderProperties = null;
 			if (binderConfiguration == null) {
-				TransportConfiguration transportConfiguration = transportSpec.getTransports().get(configurationName);
-				if (transportConfiguration == null) {
-					throw new IllegalStateException("Unknown binder configuration:" + configurationName);
-				} else {
-					binderConfiguration = binderConfigurations.get(transportConfiguration.getType());
-					binderProperties = transportConfiguration.getProperties();
-					if (binderConfiguration == null) {
-						throw new IllegalStateException("Unknown binder type:" + transportConfiguration.getType());
-					}
-				}
+				throw new IllegalStateException("Unknown binder configuration:" + configurationName);
 			}
-			SpringApplicationBuilder springApplicationBuilder = new SpringApplicationBuilder(ObjectUtils.addObjectToArray(binderConfiguration.getConfiguration(),
-					SeedConfiguration.class))
-					.bannerMode(Mode.OFF)
-					.properties(binderProperties == null ? new Properties() : binderProperties)
-					.web(false);
-			if (binderConfigurations.containsKey(configurationName) || "".equals(configurationName)) {
-				springApplicationBuilder.parent(applicationContext);
-			}
+			Properties binderProperties = binderConfiguration.getProperties();
+			Properties defaultProperties = binderProperties == null ? new Properties() : binderProperties;
+			SpringApplicationBuilder springApplicationBuilder =
+					new SpringApplicationBuilder(binderConfiguration.getBinderType().getConfigurationClasses())
+							.bannerMode(Mode.OFF)
+							.properties(defaultProperties)
+							.web(false);
+			springApplicationBuilder.parent(applicationContext);
 			ConfigurableApplicationContext binderProducingContext =
 					springApplicationBuilder.run("--spring.jmx.enabled=false");
 			@SuppressWarnings("unchecked")
@@ -113,7 +101,6 @@ public class DefaultBinderFactory<T> implements BinderFactory<T>, DisposableBean
 		}
 		return binderInstanceCache.get(configurationName).getBinderInstance();
 	}
-
 
 	static class BinderInstanceHolder<T> {
 

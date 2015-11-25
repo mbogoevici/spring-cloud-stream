@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,20 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.cloud.stream.binder;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Marius Bogoevici
  */
-public interface BinderFactory<T> {
+public class DefaultBinderTypeRegistry implements BinderTypeRegistry {
 
-	/**
-	 * Returns the binder instance associated with the given configuration name. Must return the same instance
-	 * on subsequent invocations with the same argument.
-	 *
-	 * @param configurationName the name of a binder configuration
-	 * @return the binder instance
-	 */
-	Binder<T> getBinder(String configurationName);
+	private final Map<String, BinderType> binderTypes;
+
+	public DefaultBinderTypeRegistry(Map<String, BinderType> binderTypes) {
+		this.binderTypes = Collections.unmodifiableMap(new HashMap<>(binderTypes));
+	}
+
+	@Override
+	public BinderType get(String name) {
+		return binderTypes.get(name);
+	}
+
+	@Override
+	public Map<String, BinderType> getAll() {
+		return binderTypes;
+	}
+
 }

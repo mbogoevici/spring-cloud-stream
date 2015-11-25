@@ -16,26 +16,23 @@
 
 package org.springframework.cloud.stream.binder.config;
 
-import org.hamcrest.collection.IsArrayContaining;
-import org.hamcrest.collection.IsArrayContainingInAnyOrder;
-import org.junit.Assert;
-import org.junit.Test;
-import org.springframework.cloud.stream.binder.BinderConfiguration;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
-
-import java.io.ByteArrayInputStream;
-import java.util.List;
-
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
 import static org.hamcrest.collection.IsArrayContaining.hasItemInArray;
 import static org.hamcrest.collection.IsArrayContainingInAnyOrder.arrayContainingInAnyOrder;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.CombinableMatcher.both;
+
+import java.io.ByteArrayInputStream;
+import java.util.Collection;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import org.springframework.cloud.stream.binder.BinderType;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 
 /**
  * @author Marius Bogoevici
@@ -53,13 +50,14 @@ public class BinderConfigurationParsingTests {
 		String oneBinderConfiguration = "redis=java.lang.String";
 		Resource resource = new InputStreamResource(new ByteArrayInputStream(oneBinderConfiguration.getBytes()));
 
-		List<BinderConfiguration> binderConfigurations
-				= BinderFactoryAutoConfiguration.parseBinderConfigurations(classLoader, resource);
+		Collection<BinderType> binderConfigurations
+				= BinderTypeRegistryAutoConfiguration.parseBinderConfigurations(classLoader, resource);
 
-		Assert.assertThat(binderConfigurations, hasSize(1));
+		Assert.assertNotNull(binderConfigurations);
+		Assert.assertThat(binderConfigurations.size(), equalTo(1));
 		Assert.assertThat(binderConfigurations, contains(
-				both(hasProperty("name", equalTo("redis"))).and(
-						hasProperty("configuration", hasItemInArray(String.class)))
+				both(hasProperty("defaultName", equalTo("redis"))).and(
+						hasProperty("configurationClasses", hasItemInArray(String.class)))
 		));
 	}
 
@@ -72,15 +70,15 @@ public class BinderConfigurationParsingTests {
 		Resource twoBinderConfigurationResource =
 				new InputStreamResource(new ByteArrayInputStream(binderConfiguration.getBytes()));
 
-		List<BinderConfiguration> twoBinderConfigurations
-				= BinderFactoryAutoConfiguration.parseBinderConfigurations(classLoader, twoBinderConfigurationResource);
+		Collection<BinderType> twoBinderConfigurations
+				= BinderTypeRegistryAutoConfiguration.parseBinderConfigurations(classLoader, twoBinderConfigurationResource);
 
-		Assert.assertThat(twoBinderConfigurations, hasSize(2));
+		Assert.assertThat(twoBinderConfigurations.size(), equalTo(2));
 		Assert.assertThat(twoBinderConfigurations, containsInAnyOrder(
-				both(hasProperty("name", equalTo("redis"))).and(
-						hasProperty("configuration", hasItemInArray(String.class))),
-				both(hasProperty("name", equalTo("rabbit"))).and(
-						hasProperty("configuration", hasItemInArray(Integer.class)))
+				both(hasProperty("defaultName", equalTo("redis"))).and(
+						hasProperty("configurationClasses", hasItemInArray(String.class))),
+				both(hasProperty("defaultName", equalTo("rabbit"))).and(
+						hasProperty("configurationClasses", hasItemInArray(Integer.class)))
 		));
 
 	}
@@ -95,15 +93,15 @@ public class BinderConfigurationParsingTests {
 		Resource binderConfigurationResource =
 				new InputStreamResource(new ByteArrayInputStream(binderConfiguration.getBytes()));
 
-		List<BinderConfiguration> binderConfigurations
-				= BinderFactoryAutoConfiguration.parseBinderConfigurations(classLoader, binderConfigurationResource);
+		Collection<BinderType> binderConfigurations
+				= BinderTypeRegistryAutoConfiguration.parseBinderConfigurations(classLoader, binderConfigurationResource);
 
-		Assert.assertThat(binderConfigurations, hasSize(2));
+		Assert.assertThat(binderConfigurations.size(), equalTo(2));
 		Assert.assertThat(binderConfigurations, containsInAnyOrder(
-				both(hasProperty("name", equalTo("redis"))).and(
-						hasProperty("configuration", arrayContainingInAnyOrder(String.class,Double.class))),
-				both(hasProperty("name", equalTo("rabbit"))).and(
-						hasProperty("configuration", hasItemInArray(Integer.class)))
+				both(hasProperty("defaultName", equalTo("redis"))).and(
+						hasProperty("configurationClasses", arrayContainingInAnyOrder(String.class,Double.class))),
+				both(hasProperty("defaultName", equalTo("rabbit"))).and(
+						hasProperty("configurationClasses", hasItemInArray(Integer.class)))
 		));
 
 	}

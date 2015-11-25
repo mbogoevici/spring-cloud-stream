@@ -13,24 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.cloud.stream.utils;
 
-import org.mockito.Mockito;
-
-import org.springframework.cloud.stream.binder.Binder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+package org.springframework.cloud.stream.binder;
 
 /**
  * @author Marius Bogoevici
  */
-@Configuration
-public class MockBinderConfiguration {
+public class BinderType {
 
-	private final Binder mock = Mockito.mock(Binder.class);
+	private final String defaultName;
 
-	@Bean
-	public Binder<?> binder() {
-		return mock;
+	private final Class<?>[] configurationClasses;
+
+	public BinderType(String defaultName, Class<?>[] configurationClasses) {
+		this.defaultName = defaultName;
+		this.configurationClasses = configurationClasses;
+	}
+
+	public String getDefaultName() {
+		return defaultName;
+	}
+
+	public Class<?>[] getConfigurationClasses() {
+		return configurationClasses;
 	}
 }

@@ -27,14 +27,13 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.stream.binder.Binder;
-import org.springframework.cloud.stream.binder.BinderFactory;
+import org.springframework.cloud.stream.binder.BinderRegistry;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.cloud.stream.binding.BinderAwareRouterBeanPostProcessor;
 import org.springframework.cloud.stream.binding.ChannelBindingService;
 import org.springframework.cloud.stream.binding.ChannelFactory;
-import org.springframework.cloud.stream.binding.DefaultChannelFactory;
 import org.springframework.cloud.stream.binding.ContextStartAfterRefreshListener;
+import org.springframework.cloud.stream.binding.DefaultChannelFactory;
 import org.springframework.cloud.stream.binding.InputBindingLifecycle;
 import org.springframework.cloud.stream.binding.MessageConverterConfigurer;
 import org.springframework.cloud.stream.binding.OutputBindingLifecycle;
@@ -70,8 +69,8 @@ public class ChannelBindingServiceConfiguration {
 	@ConditionalOnMissingBean(ChannelBindingService.class)
 	public ChannelBindingService bindingService(
 			ChannelBindingServiceProperties channelBindingServiceProperties,
-			BinderFactory<MessageChannel> binderFactory) {
-		return new ChannelBindingService(channelBindingServiceProperties, binderFactory);
+			BinderRegistry<MessageChannel> binderRegistry) {
+		return new ChannelBindingService(channelBindingServiceProperties, binderRegistry);
 	}
 
 	@Bean
@@ -104,8 +103,8 @@ public class ChannelBindingServiceConfiguration {
 
 	@Bean
 	public BinderAwareChannelResolver binderAwareChannelResolver(
-			BinderFactory<MessageChannel> binderFactory) {
-		return new BinderAwareChannelResolver(binderFactory, new Properties());
+			BinderRegistry<MessageChannel> binderRegistry) {
+		return new BinderAwareChannelResolver(binderRegistry, new Properties());
 	}
 
 	@Bean

@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration:\
-org.springframework.cloud.stream.binder.config.BinderFactoryAutoConfiguration
+org.springframework.cloud.stream.binder.config.BinderTypeRegistryAutoConfiguration

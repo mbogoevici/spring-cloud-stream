@@ -13,24 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.cloud.stream.utils;
 
-import org.mockito.Mockito;
+import java.util.Collections;
+import java.util.Properties;
 
 import org.springframework.cloud.stream.binder.Binder;
+import org.springframework.cloud.stream.binder.BinderConfiguration;
+import org.springframework.cloud.stream.binder.BinderRegistry;
+import org.springframework.cloud.stream.binder.BinderType;
+import org.springframework.cloud.stream.binder.DefaultBinderRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.MessageChannel;
 
 /**
+ * A simple configuration that creates mock {@link org.springframework.cloud.stream.binder.Binder}s.
+ *
  * @author Marius Bogoevici
  */
 @Configuration
-public class MockBinderConfiguration {
-
-	private final Binder mock = Mockito.mock(Binder.class);
+public class MockBinderRegistryConfiguration {
 
 	@Bean
-	public Binder<?> binder() {
-		return mock;
+	public BinderRegistry<?> binderRegistry() {
+		return new DefaultBinderRegistry<>(Collections.singletonMap("mock",new BinderConfiguration(
+				new BinderType("",new Class[]{MockBinderConfiguration.class}),new Properties())));
 	}
+
+	@Bean
+	public Binder<?> defaultBinder(BinderRegistry<MessageChannel> binderRegistry) {
+		return binderRegistry.getBinder(null);
+	}
+
 }

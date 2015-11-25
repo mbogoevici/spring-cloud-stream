@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.config;
+package org.springframework.cloud.stream.binder;
 
 /**
  * @author Marius Bogoevici
  */
-//@EnableAutoConfiguration(exclude = BinderFactoryAutoConfiguration.class)
-public class SeedConfiguration {
+public interface BinderRegistry<T> {
+
+	/**
+	 * Returns the binder instance associated with the given configuration name. Caching is a requirement, and must
+	 * return the same instance on subsequent invocations with the same argument.
+	 *
+	 * @param configurationName the name of a binder configuration
+	 * @return the binder instance
+	 */
+	Binder<T> getBinder(String configurationName);
 }

@@ -24,6 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.springframework.cloud.stream.config.AggregateBuilderConfiguration;
+import org.springframework.cloud.stream.config.BinderRegistryConfiguration;
 import org.springframework.cloud.stream.config.BindingBeansRegistrar;
 import org.springframework.cloud.stream.config.ChannelBindingServiceConfiguration;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +44,8 @@ import org.springframework.integration.config.EnableIntegration;
 @Documented
 @Inherited
 @Configuration
-@Import({ChannelBindingServiceConfiguration.class, AggregateBuilderConfiguration.class, BindingBeansRegistrar.class})
+@Import({BinderRegistryConfiguration.class,ChannelBindingServiceConfiguration.class,
+		AggregateBuilderConfiguration.class, BindingBeansRegistrar.class})
 @EnableIntegration
 public @interface EnableBinding {
 

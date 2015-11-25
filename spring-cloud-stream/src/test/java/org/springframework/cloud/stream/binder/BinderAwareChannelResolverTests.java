@@ -71,7 +71,7 @@ public class BinderAwareChannelResolverTests {
 		this.binder = new LocalMessageChannelBinder();
 		this.binder.setApplicationContext(context);
 		this.binder.afterPropertiesSet();
-		this.resolver = new BinderAwareChannelResolver(Mockito.mock(BinderFactory.class), null);
+		this.resolver = new BinderAwareChannelResolver(Mockito.mock(BinderRegistry.class), null);
 		this.resolver.setBeanFactory(context);
 		context.getBeanFactory().registerSingleton("channelResolver",
 				this.resolver);
@@ -164,7 +164,7 @@ public class BinderAwareChannelResolverTests {
 		doReturn(new DirectChannel()).when(binder).bindDynamicProducer("queue:foo", properties);
 		doReturn(new DirectChannel()).when(binder).bindDynamicPubSubProducer("topic:bar", properties);
 		@SuppressWarnings("unchecked")
-		BinderAwareChannelResolver resolver = new BinderAwareChannelResolver(Mockito.mock(BinderFactory.class), properties);
+		BinderAwareChannelResolver resolver = new BinderAwareChannelResolver(Mockito.mock(BinderRegistry.class), properties);
 		BeanFactory beanFactory = new DefaultListableBeanFactory();
 		resolver.setBeanFactory(beanFactory);
 		resolver.resolveDestination("queue:foo");
