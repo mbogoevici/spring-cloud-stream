@@ -23,6 +23,7 @@ import java.util.Set;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.cloud.stream.binder.AbstractTestBinder;
+import org.springframework.cloud.stream.binder.Binding;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.integration.codec.kryo.PojoCodec;
 import org.springframework.integration.context.IntegrationContextUtils;
@@ -35,6 +36,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  * @author Ilayaperumal Gopinathan
  * @author Gary Russell
  * @author David Turanski
+ * @author Mark Fisher
  */
 public class RabbitTestBinder extends AbstractTestBinder<RabbitMessageChannelBinder> {
 
@@ -66,18 +68,18 @@ public class RabbitTestBinder extends AbstractTestBinder<RabbitMessageChannelBin
 	}
 
 	@Override
-	public void bindConsumer(String name, String group, MessageChannel moduleInputChannel, Properties properties) {
+	public Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel moduleInputChannel, Properties properties) {
 		this.queues.add(prefix(properties) + name + (group == null ? ".default" : "." + group));
 		this.exchanges.add(prefix(properties) + name);
-		super.bindConsumer(name, group, moduleInputChannel, properties);
+		return super.bindConsumer(name, group, moduleInputChannel, properties);
 
 	}
 
 	@Override
-	public void bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
 		this.queues.add(prefix(properties) + name + ".default");
 		this.exchanges.add(prefix(properties) + name);
-		super.bindProducer(name, moduleOutputChannel, properties);
+		return super.bindProducer(name, moduleOutputChannel, properties);
 	}
 
 	public String prefix(Properties properties) {

@@ -142,13 +142,13 @@ public class LocalMessageChannelBinder extends MessageChannelBinderSupport {
 	}
 
 	@Override
-	protected void doBindConsumer(String name, String group, MessageChannel moduleInputChannel,
+	protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel moduleInputChannel,
 			Properties properties) {
 		validateConsumerProperties(name, properties, CONSUMER_STANDARD_PROPERTIES);
-		doRegisterConsumer(name, moduleInputChannel, this.pubsubChannelProvider, properties);
+		return doRegisterConsumer(name, moduleInputChannel, this.pubsubChannelProvider, properties);
 	}
 
-	private void doRegisterConsumer(String name, MessageChannel moduleInputChannel,
+	private Binding<MessageChannel> doRegisterConsumer(String name, MessageChannel moduleInputChannel,
 			SharedChannelProvider<?> channelProvider, Properties properties) {
 		Assert.hasText(name, "a valid name is required to register an inbound channel");
 		Assert.notNull(moduleInputChannel, "channel must not be null");
@@ -156,6 +156,8 @@ public class LocalMessageChannelBinder extends MessageChannelBinderSupport {
 		bridge(name, registeredChannel, moduleInputChannel,
 				"inbound." + ((NamedComponent) registeredChannel).getComponentName(),
 				new LocalBindingPropertiesAccessor(properties));
+		// TODO: ?
+		return null;
 	}
 
 	/**
@@ -163,12 +165,12 @@ public class LocalMessageChannelBinder extends MessageChannelBinderSupport {
 	 * channel instance.
 	 */
 	@Override
-	public void bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
 		validateConsumerProperties(name, properties, PRODUCER_STANDARD_PROPERTIES);
-		doRegisterProducer(name, moduleOutputChannel, this.pubsubChannelProvider, properties);
+		return doRegisterProducer(name, moduleOutputChannel, this.pubsubChannelProvider, properties);
 	}
 
-	private void doRegisterProducer(String name, MessageChannel moduleOutputChannel,
+	private Binding<MessageChannel> doRegisterProducer(String name, MessageChannel moduleOutputChannel,
 			SharedChannelProvider<?> channelProvider, Properties properties) {
 		Assert.hasText(name, "a valid name is required to register an outbound channel");
 		Assert.notNull(moduleOutputChannel, "channel must not be null");
@@ -176,10 +178,12 @@ public class LocalMessageChannelBinder extends MessageChannelBinderSupport {
 		bridge(name, moduleOutputChannel, registeredChannel,
 				"outbound." + ((NamedComponent) registeredChannel).getComponentName(),
 				new LocalBindingPropertiesAccessor(properties));
+		// TODO: ?
+		return null;
 	}
 
 	@Override
-	public void unbindProducer(String name, MessageChannel channel) {
+	public void unbind(Binding<MessageChannel> binding) {
 	}
 
 	protected BridgeHandler bridge(String name, MessageChannel from, MessageChannel to, String bridgeName,
@@ -229,7 +233,7 @@ public class LocalMessageChannelBinder extends MessageChannelBinderSupport {
 
 		try {
 			cefb.getObject().setComponentName(handler.getComponentName());
-			Binding binding = isInbound ? Binding.forConsumer(name, cefb.getObject(), to, properties)
+			Binding<MessageChannel> binding = isInbound ? Binding.forConsumer(name, null, cefb.getObject(), to, properties)
 					: Binding.forProducer(name, from, cefb.getObject(), properties);
 			addBinding(binding);
 			binding.start();

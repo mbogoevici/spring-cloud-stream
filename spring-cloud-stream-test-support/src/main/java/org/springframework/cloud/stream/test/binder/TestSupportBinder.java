@@ -23,6 +23,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import org.springframework.cloud.stream.binder.Binder;
+import org.springframework.cloud.stream.binder.Binding;
 import org.springframework.cloud.stream.test.matcher.MessageQueueMatcher;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -39,6 +40,7 @@ import org.springframework.util.Assert;
  *
  * @author Eric Bottard
  * @author Gary Russell
+ * @author Mark Fisher
  * @see MessageQueueMatcher
  */
 public class TestSupportBinder implements Binder<MessageChannel> {
@@ -47,14 +49,15 @@ public class TestSupportBinder implements Binder<MessageChannel> {
 
 
 	@Override
-	public void bindConsumer(String name, String group, MessageChannel inboundBindTarget, Properties properties) {
+	public Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel inboundBindTarget, Properties properties) {
+		return null;
 	}
 
 	/**
 	 * Registers a single subscriber to the channel, that enqueues messages for later retrieval and assertion in tests.
 	 */
 	@Override
-	public void bindProducer(String name, MessageChannel outboundBindTarget, Properties properties) {
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel outboundBindTarget, Properties properties) {
 		final BlockingQueue<Message<?>> queue = messageCollector.register(outboundBindTarget);
 		((SubscribableChannel)outboundBindTarget).subscribe(new MessageHandler() {
 			@Override
@@ -62,27 +65,13 @@ public class TestSupportBinder implements Binder<MessageChannel> {
 				queue.add(message);
 			}
 		});
-
+		return null;
 	}
 
 	@Override
-	public void unbindProducer(String name, MessageChannel channel) {
-		messageCollector.unregister(channel);
-	}
-
-	@Override
-	public void unbindConsumers(String name, String group) {
-
-	}
-
-	@Override
-	public void unbindProducers(String name) {
-
-	}
-
-	@Override
-	public void unbindConsumer(String name, String group, MessageChannel inboundBindTarget) {
-
+	public void unbind(Binding<MessageChannel> binding) {
+		if (Binding.Type.producer.equals(binding.getType()))
+		messageCollector.unregister(binding.getTarget());
 	}
 
 	public MessageCollector messageCollector() {

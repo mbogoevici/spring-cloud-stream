@@ -442,18 +442,18 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 	}
 
 	@Override
-	protected void doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
+	protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
 		// If the caller provides a group, use it; otherwise
 		// usage of a different consumer group each time achieves pub-sub
 		// but multiple instances of this binding will each get all messages
 		// PubSub consumers reset at the latest time, which allows them to receive only messages sent after
 		// they've been bound
 		String consumerGroup = group == null ? UUID.randomUUID().toString() : group;
-		createKafkaConsumer(name, inputChannel, properties, consumerGroup, OffsetRequest.LatestTime());
+		return createKafkaConsumer(name, inputChannel, properties, consumerGroup, OffsetRequest.LatestTime());
 	}
 
 	@Override
-	public void bindProducer(final String name, MessageChannel moduleOutputChannel, Properties properties) {
+	public Binding<MessageChannel> bindProducer(final String name, MessageChannel moduleOutputChannel, Properties properties) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		KafkaPropertiesAccessor producerPropertiesAccessor = new KafkaPropertiesAccessor(properties);
 		validateProducerProperties(name, properties, SUPPORTED_PRODUCER_PROPERTIES);
@@ -493,10 +493,11 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 			consumer.setBeanFactory(this.getBeanFactory());
 			consumer.setBeanName("outbound." + name);
 			consumer.afterPropertiesSet();
-			Binding producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer,
+			Binding<MessageChannel> producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer,
 					producerPropertiesAccessor);
 			addBinding(producerBinding);
 			producerBinding.start();
+			return producerBinding;
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -558,7 +559,7 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 		}
 	}
 
-	private void createKafkaConsumer(String name, final MessageChannel moduleInputChannel, Properties properties,
+	private Binding<MessageChannel> createKafkaConsumer(String name, final MessageChannel moduleInputChannel, Properties properties,
 			String group, long referencePoint) {
 
 		validateConsumerProperties(groupedName(name, group), properties, SUPPORTED_CONSUMER_PROPERTIES);
@@ -648,10 +649,10 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 		String groupedName = groupedName(name, group);
 		edc.setBeanName("inbound." + groupedName);
 
-		Binding consumerBinding = Binding.forConsumer(groupedName, edc, moduleInputChannel, accessor);
+		Binding<MessageChannel> consumerBinding = Binding.forConsumer(name, group, edc, moduleInputChannel, accessor);
 		addBinding(consumerBinding);
 		consumerBinding.start();
-
+		return consumerBinding;
 	}
 
 	public KafkaMessageListenerContainer createMessageListenerContainer(Properties properties, String group,

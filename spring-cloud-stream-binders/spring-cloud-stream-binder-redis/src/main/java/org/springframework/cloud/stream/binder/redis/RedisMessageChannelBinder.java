@@ -135,7 +135,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 	}
 
 	@Override
-	protected void doBindConsumer(final String name, String group, MessageChannel moduleInputChannel, Properties properties) {
+	protected Binding<MessageChannel> doBindConsumer(final String name, String group, MessageChannel moduleInputChannel, Properties properties) {
 		RedisPropertiesAccessor accessor = new RedisPropertiesAccessor(properties);
 		String queueName = groupedName(name, group);
 		validateConsumerProperties(queueName, properties, SUPPORTED_CONSUMER_PROPERTIES);
@@ -144,7 +144,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 			queueName += "-" + partitionIndex;
 		}
 		MessageProducerSupport adapter = createInboundAdapter(accessor, queueName);
-		doRegisterConsumer(name, group, queueName, moduleInputChannel, adapter, accessor);
+		return doRegisterConsumer(name, group, queueName, moduleInputChannel, adapter, accessor);
 	}
 
 	private MessageProducerSupport createInboundAdapter(RedisPropertiesAccessor accessor, String queueName) {
@@ -164,7 +164,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 		return adapter;
 	}
 
-	private void doRegisterConsumer(String bindingName, String group, String channelName, MessageChannel moduleInputChannel,
+	private Binding<MessageChannel> doRegisterConsumer(String bindingName, String group, String channelName, MessageChannel moduleInputChannel,
 			MessageProducerSupport adapter, RedisPropertiesAccessor properties) {
 		DirectChannel bridgeToModuleChannel = new DirectChannel();
 		bridgeToModuleChannel.setBeanFactory(this.getBeanFactory());
@@ -173,7 +173,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 		adapter.setOutputChannel(bridgeInputChannel);
 		adapter.setBeanName("inbound." + channelName);
 		adapter.afterPropertiesSet();
-		Binding consumerBinding = Binding.forConsumer(channelName, adapter, moduleInputChannel, properties);
+		Binding<MessageChannel> consumerBinding = Binding.forConsumer(channelName, group, adapter, moduleInputChannel, properties);
 		addBinding(consumerBinding);
 		ReceivingHandler convertingBridge = new ReceivingHandler();
 		convertingBridge.setOutputChannel(moduleInputChannel);
@@ -182,6 +182,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 		bridgeToModuleChannel.subscribe(convertingBridge);
 		this.redisOperations.boundZSetOps(CONSUMER_GROUPS_KEY_PREFIX + bindingName).incrementScore(group, 1);
 		consumerBinding.start();
+		return consumerBinding;
 	}
 
 	/**
@@ -242,16 +243,19 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 	}
 
 	@Override
-	protected void afterUnbindConsumers(String name, String group) {
-		this.redisOperations.boundZSetOps(CONSUMER_GROUPS_KEY_PREFIX + name).incrementScore(group, -1);
+	protected void afterUnbind(Binding<MessageChannel> binding) {
+		if (Binding.Type.consumer.equals(binding.getType())) {
+			String key = CONSUMER_GROUPS_KEY_PREFIX + binding.getName();
+			this.redisOperations.boundZSetOps(key).incrementScore(binding.getGroup(), -1);
+		}
 	}
 
 	@Override
-	public void bindProducer(final String name, MessageChannel moduleOutputChannel, Properties properties) {
+	public Binding<MessageChannel> bindProducer(final String name, MessageChannel moduleOutputChannel, Properties properties) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		validateProducerProperties(name, properties, SUPPORTED_PRODUCER_PROPERTIES);
 		RedisPropertiesAccessor accessor = new RedisPropertiesAccessor(properties);
-		doRegisterProducer(name, moduleOutputChannel, accessor);
+		return doRegisterProducer(name, moduleOutputChannel, accessor);
 	}
 
 	private RedisQueueOutboundChannelAdapter createProducerEndpoint(String name, RedisPropertiesAccessor accessor) {
@@ -271,16 +275,17 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 		return queue;
 	}
 
-	private void doRegisterProducer(final String name, MessageChannel moduleOutputChannel, RedisPropertiesAccessor properties) {
+	private Binding<MessageChannel> doRegisterProducer(final String name, MessageChannel moduleOutputChannel, RedisPropertiesAccessor properties) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		MessageHandler handler = new SendingHandler(name, properties);
 		EventDrivenConsumer consumer = new EventDrivenConsumer((SubscribableChannel) moduleOutputChannel, handler);
 		consumer.setBeanFactory(this.getBeanFactory());
 		consumer.setBeanName("outbound." + name);
 		consumer.afterPropertiesSet();
-		Binding producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer, properties);
+		Binding<MessageChannel> producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer, properties);
 		addBinding(producerBinding);
 		producerBinding.start();
+		return producerBinding;
 	}
 
 	@Override

@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +75,7 @@ import org.springframework.util.StringUtils;
  * @author David Turanski
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
+ * @author Mark Fisher
  */
 public abstract class MessageChannelBinderSupport
 		implements Binder<MessageChannel>, ApplicationContextAware, InitializingBean {
@@ -161,7 +161,7 @@ public abstract class MessageChannelBinderSupport
 					BinderPropertyKeys.BATCH_BUFFER_LIMIT,
 			}));
 
-	private final List<Binding> bindings = Collections.synchronizedList(new ArrayList<Binding>());
+	private final List<Binding<MessageChannel>> bindings = Collections.synchronizedList(new ArrayList<Binding<MessageChannel>>());
 
 	private final IdGenerator idGenerator = new AlternativeJdkIdGenerator();
 
@@ -367,12 +367,12 @@ public abstract class MessageChannelBinderSupport
 	}
 
 	@Override
-	public final void bindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
+	public final Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
 		group = (StringUtils.hasText(group)) ? group : DEFAULT_CONSUMER_GROUP;
-		doBindConsumer(name, group, inputChannel, properties);
+		return doBindConsumer(name, group, inputChannel, properties);
 	}
 
-	protected abstract void doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties);
+	protected abstract Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties);
 
 	/**
 	 * Create a producer for the named channel and bind it to the binder. Synchronized to avoid creating multiple
@@ -409,74 +409,17 @@ public abstract class MessageChannelBinderSupport
 	}
 
 	@Override
-	public final void unbindConsumers(String name, String group) {
-		deleteBindings("inbound." + groupedName(name, group));
-		afterUnbindConsumers(name, group == null ? DEFAULT_CONSUMER_GROUP : group);
-	}
-
-	protected void afterUnbindConsumers(String name, String group) {
-	}
-
-	@Override
-	public void unbindProducers(String name) {
-		deleteBindings("outbound." + name);
-	}
-
-	@Override
-	public void unbindConsumer(String name, String group, MessageChannel channel) {
-		deleteBinding("inbound." + groupedName(name, group), channel);
-	}
-
-	@Override
-	public void unbindProducer(String name, MessageChannel channel) {
-		deleteBinding("outbound." + name, channel);
-	}
-
-	protected void addBinding(Binding binding) {
-		this.bindings.add(binding);
-	}
-
-	protected void deleteBindings(String name) {
-		Assert.hasText(name, "a valid name is required to remove bindings");
-		List<Binding> bindingsToRemove = new ArrayList<Binding>();
-		synchronized (this.bindings) {
-			Iterator<Binding> iterator = this.bindings.iterator();
-			while (iterator.hasNext()) {
-				Binding binding = iterator.next();
-				if (binding.getEndpoint().getComponentName().equals(name)) {
-					bindingsToRemove.add(binding);
-				}
-			}
-			for (Binding binding : bindingsToRemove) {
-				doDeleteBinding(binding);
-			}
-		}
-	}
-
-	protected void deleteBinding(String name, MessageChannel channel) {
-		Assert.hasText(name, "a valid name is required to remove a binding");
-		Assert.notNull(channel, "a valid channel is required to remove a binding");
-		Binding bindingToRemove = null;
-		synchronized (this.bindings) {
-			Iterator<Binding> iterator = this.bindings.iterator();
-			while (iterator.hasNext()) {
-				Binding binding = iterator.next();
-				if (binding.getChannel().equals(channel) &&
-						binding.getEndpoint().getComponentName().equals(name)) {
-					bindingToRemove = binding;
-					break;
-				}
-			}
-			if (bindingToRemove != null) {
-				doDeleteBinding(bindingToRemove);
-			}
-		}
-
-	}
-
-	private void doDeleteBinding(Binding binding) {
+	public void unbind(Binding<MessageChannel> binding) {
 		binding.stop();
 		this.bindings.remove(binding);
+		afterUnbind(binding);
+	}
+
+	protected void afterUnbind(Binding<MessageChannel> binding) {
+	}
+
+	protected void addBinding(Binding<MessageChannel> binding) {
+		this.bindings.add(binding);
 	}
 
 	protected void stopBindings() {

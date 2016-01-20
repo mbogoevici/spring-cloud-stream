@@ -16,8 +16,12 @@
 
 package org.springframework.cloud.stream.binding;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.cloud.stream.binder.Binder;
 import org.springframework.cloud.stream.binder.BinderFactory;
+import org.springframework.cloud.stream.binder.Binding;
 import org.springframework.cloud.stream.config.BindingProperties;
 import org.springframework.cloud.stream.config.ChannelBindingServiceProperties;
 import org.springframework.messaging.MessageChannel;
@@ -38,34 +42,42 @@ public class ChannelBindingService {
 
 	private final ChannelBindingServiceProperties channelBindingServiceProperties;
 
+	private final Map<String, Binding<MessageChannel>> producerBindings = new HashMap<>();
+
+	private final Map<String, Binding<MessageChannel>> consumerBindings = new HashMap<>();
+
 	public ChannelBindingService(ChannelBindingServiceProperties channelBindingServiceProperties,
 								 BinderFactory<MessageChannel> binderFactory) {
 		this.channelBindingServiceProperties = channelBindingServiceProperties;
 		this.binderFactory = binderFactory;
 	}
 
-	public void bindConsumer(MessageChannel inputChannel, String inputChannelName) {
+	public Binding<MessageChannel> bindConsumer(MessageChannel inputChannel, String inputChannelName) {
 		String channelBindingTarget = this.channelBindingServiceProperties.getBindingDestination(inputChannelName);
 		Binder<MessageChannel> binder = getBinderForChannel(inputChannelName);
-		binder.bindConsumer(channelBindingTarget, consumerGroup(inputChannelName), inputChannel,
+		Binding<MessageChannel> binding = binder.bindConsumer(channelBindingTarget, consumerGroup(inputChannelName), inputChannel,
 				this.channelBindingServiceProperties.getConsumerProperties(inputChannelName));
+		this.consumerBindings.put(inputChannelName, binding);
+		return binding;
 	}
 
-	public void bindProducer(MessageChannel outputChannel, String outputChannelName) {
+	public Binding<MessageChannel> bindProducer(MessageChannel outputChannel, String outputChannelName) {
 		String channelBindingTarget = this.channelBindingServiceProperties.getBindingDestination(outputChannelName);
 		Binder<MessageChannel> binder = getBinderForChannel(outputChannelName);
-		binder.bindProducer(channelBindingTarget, outputChannel,
+		Binding<MessageChannel> binding = binder.bindProducer(channelBindingTarget, outputChannel,
 				this.channelBindingServiceProperties.getProducerProperties(outputChannelName));
+		this.producerBindings.put(outputChannelName, binding);
+		return binding;
 	}
 
 	public void unbindConsumers(String inputChannelName) {
 		Binder<MessageChannel> binder = getBinderForChannel(inputChannelName);
-		binder.unbindConsumers(inputChannelName, consumerGroup(inputChannelName));
+		binder.unbind(this.consumerBindings.remove(inputChannelName));
 	}
 
 	public void unbindProducers(String outputChannelName) {
 		Binder<MessageChannel> binder = getBinderForChannel(outputChannelName);
-		binder.unbindProducers(outputChannelName);
+		binder.unbind(this.producerBindings.remove(outputChannelName));
 	}
 
 	private Binder<MessageChannel> getBinderForChannel(String channelName) {

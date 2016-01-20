@@ -34,6 +34,7 @@ import org.junit.Test;
 
 import org.springframework.cloud.stream.binder.Binder;
 import org.springframework.cloud.stream.binder.BinderPropertyKeys;
+import org.springframework.cloud.stream.binder.Binding;
 import org.springframework.cloud.stream.binder.PartitionCapableBinderTests;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.test.junit.kafka.KafkaTestSupport;
@@ -138,8 +139,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 			if (codec != null) {
 				props.put(KafkaMessageChannelBinder.COMPRESSION_CODEC, codec);
 			}
-			binder.bindProducer("foo.0", moduleOutputChannel, props);
-			binder.bindConsumer("foo.0", "test", moduleInputChannel, null);
+			Binding<MessageChannel> producerBinding = binder.bindProducer("foo.0", moduleOutputChannel, props);
+			Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo.0", "test", moduleInputChannel, null);
 			Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 			// Let the consumer actually bind to the producer before sending a msg
 			binderBindUnbindLatency();
@@ -147,8 +148,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 			Message<?> inbound = moduleInputChannel.receive(2000);
 			assertNotNull(inbound);
 			assertArrayEquals(ratherBigPayload, (byte[]) inbound.getPayload());
-			binder.unbindProducers("foo.0");
-			binder.unbindConsumers("foo.0", "test");
+			binder.unbind(producerBinding);
+			binder.unbind(consumerBinding);
 		}
 	}
 
@@ -167,8 +168,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Properties consumerProperties = new Properties();
 		consumerProperties.put(BinderPropertyKeys.MIN_PARTITION_COUNT, "10");
 		long uniqueBindingId = System.currentTimeMillis();
-		binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
-		binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
 		Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 		// Let the consumer actually bind to the producer before sending a msg
 		binderBindUnbindLatency();
@@ -179,8 +180,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Collection<Partition> partitions = binder.getCoreBinder().getConnectionFactory().getPartitions(
 				"foo" + uniqueBindingId + ".0");
 		assertThat(partitions, hasSize(10));
-		binder.unbindProducers("foo" + uniqueBindingId + ".0");
-		binder.unbindConsumers("foo" + uniqueBindingId + ".0", "default");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	@Test
@@ -200,8 +201,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		consumerProps.put(BinderPropertyKeys.MIN_PARTITION_COUNT, "5");
 		consumerProps.put(BinderPropertyKeys.CONCURRENCY, "6");
 		long uniqueBindingId = System.currentTimeMillis();
-		binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProps);
-		binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProps);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProps);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProps);
 		Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 		// Let the consumer actually bind to the producer before sending a msg
 		binderBindUnbindLatency();
@@ -212,8 +213,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Collection<Partition> partitions = binder.getCoreBinder().getConnectionFactory().getPartitions(
 				"foo" + uniqueBindingId + ".0");
 		assertThat(partitions, hasSize(6));
-		binder.unbindProducers("foo" + uniqueBindingId + ".0");
-		binder.unbindConsumers("foo" + uniqueBindingId + ".0", "default");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	@Test
@@ -232,8 +233,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		consumerProps.put(BinderPropertyKeys.MIN_PARTITION_COUNT, "6");
 		consumerProps.put(BinderPropertyKeys.CONCURRENCY, "5");
 		long uniqueBindingId = System.currentTimeMillis();
-		binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProps);
-		binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProps);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProps);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProps);
 		Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 		// Let the consumer actually bind to the producer before sending a msg
 		binderBindUnbindLatency();
@@ -244,8 +245,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Collection<Partition> partitions = binder.getCoreBinder().getConnectionFactory().getPartitions(
 				"foo" + uniqueBindingId + ".0");
 		assertThat(partitions, hasSize(6));
-		binder.unbindProducers("foo" + uniqueBindingId + ".0");
-		binder.unbindConsumers("foo" + uniqueBindingId + ".0", "default");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	@Test
@@ -264,8 +265,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Properties consumerProperties = new Properties();
 		consumerProperties.put(BinderPropertyKeys.MIN_PARTITION_COUNT, "3");
 		long uniqueBindingId = System.currentTimeMillis();
-		binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
-		binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
 		Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 		// Let the consumer actually bind to the producer before sending a msg
 		binderBindUnbindLatency();
@@ -276,8 +277,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Collection<Partition> partitions = binder.getCoreBinder().getConnectionFactory().getPartitions(
 				"foo" + uniqueBindingId + ".0");
 		assertThat(partitions, hasSize(5));
-		binder.unbindProducers("foo" + uniqueBindingId + ".0");
-		binder.unbindConsumers("foo" + uniqueBindingId + ".0", "default");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	@Test
@@ -296,8 +297,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Properties consumerProperties = new Properties();
 		consumerProperties.put(BinderPropertyKeys.MIN_PARTITION_COUNT, "5");
 		long uniqueBindingId = System.currentTimeMillis();
-		binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
-		binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo" + uniqueBindingId + ".0", moduleOutputChannel, producerProperties);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo" + uniqueBindingId + ".0", null, moduleInputChannel, consumerProperties);
 		Message<?> message = org.springframework.integration.support.MessageBuilder.withPayload(ratherBigPayload).build();
 		// Let the consumer actually bind to the producer before sending a msg
 		binderBindUnbindLatency();
@@ -308,8 +309,8 @@ public class KafkaBinderTests extends PartitionCapableBinderTests {
 		Collection<Partition> partitions = binder.getCoreBinder().getConnectionFactory().getPartitions(
 				"foo" + uniqueBindingId + ".0");
 		assertThat(partitions, hasSize(5));
-		binder.unbindProducers("foo" + uniqueBindingId + ".0");
-		binder.unbindConsumers("foo" + uniqueBindingId + ".0", "default");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 }

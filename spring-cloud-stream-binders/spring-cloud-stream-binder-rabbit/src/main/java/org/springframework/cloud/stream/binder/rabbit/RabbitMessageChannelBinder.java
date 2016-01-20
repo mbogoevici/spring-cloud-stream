@@ -388,7 +388,7 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 	}
 
 	@Override
-	public void doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
+	public Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
 		String baseQueueName = groupedName(name, group);
 		if (this.logger.isInfoEnabled()) {
 			this.logger.info("declaring queue for inbound: " + baseQueueName + ", bound to: " + name);
@@ -423,10 +423,11 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		else {
 			declareBinding(queue.getName(), BindingBuilder.bind(queue).to(exchange).with("#"));
 		}
-		doRegisterConsumer(baseQueueName, inputChannel, queue, accessor);
+		Binding<MessageChannel> binding = doRegisterConsumer(baseQueueName, group, inputChannel, queue, accessor);
 		if (durable) {
 			autoBindDLQ(applyPrefix(prefix, baseQueueName), queueName, accessor);
 		}
+		return binding;
 	}
 
 	private Map<String, Object> queueArgs(RabbitPropertiesAccessor accessor, String queueName) {
@@ -438,8 +439,9 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		return args;
 	}
 
-	private void doRegisterConsumer(String name, MessageChannel moduleInputChannel, Queue queue,
+	private Binding<MessageChannel> doRegisterConsumer(String name, String group, MessageChannel moduleInputChannel, Queue queue,
 			RabbitPropertiesAccessor properties) {
+		Binding<MessageChannel> consumerBinding = null;
 		// Fix for XD-2503
 		// Temporarily overrides the thread context classloader with the one where the SimpleMessageListenerContainer
 		// is defined
@@ -493,7 +495,7 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 			mapper.setReplyHeaderNames(properties.getReplyHeaderPattens(this.defaultReplyHeaderPatterns));
 			adapter.setHeaderMapper(mapper);
 			adapter.afterPropertiesSet();
-			Binding consumerBinding = Binding.forConsumer(name, adapter, moduleInputChannel, properties);
+			consumerBinding = Binding.forConsumer(name, group, adapter, moduleInputChannel, properties);
 			addBinding(consumerBinding);
 			ReceivingHandler convertingBridge = new ReceivingHandler();
 			convertingBridge.setOutputChannel(moduleInputChannel);
@@ -505,6 +507,7 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		finally {
 			Thread.currentThread().setContextClassLoader(originalClassloader);
 		}
+		return consumerBinding;
 	}
 
 	private MessageRecoverer determineRecoverer(String name, RabbitPropertiesAccessor properties) {
@@ -568,14 +571,14 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 	}
 
 	@Override
-	public void bindProducer(String name, MessageChannel outputChannel, Properties properties) {
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel outputChannel, Properties properties) {
 		validateProducerProperties(name, properties, SUPPORTED_PRODUCER_PROPERTIES);
 		RabbitPropertiesAccessor accessor = new RabbitPropertiesAccessor(properties);
 		String exchangeName = applyPrefix(accessor.getPrefix(this.defaultPrefix), name);
 		TopicExchange exchange = new TopicExchange(exchangeName);
 		declareExchange(exchangeName, exchange);
 		AmqpOutboundEndpoint endpoint = this.buildOutboundEndpoint(name, accessor, determineRabbitTemplate(accessor));
-		doRegisterProducer(name, outputChannel, endpoint, accessor);
+		return doRegisterProducer(name, outputChannel, endpoint, accessor);
 	}
 
 	private RabbitTemplate determineRabbitTemplate(RabbitPropertiesAccessor properties) {
@@ -603,12 +606,12 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		return rabbitTemplate;
 	}
 
-	private void doRegisterProducer(final String name, MessageChannel moduleOutputChannel,
+	private Binding<MessageChannel> doRegisterProducer(final String name, MessageChannel moduleOutputChannel,
 			AmqpOutboundEndpoint delegate, RabbitPropertiesAccessor properties) {
-		this.doRegisterProducer(name, moduleOutputChannel, delegate, null, properties);
+		return this.doRegisterProducer(name, moduleOutputChannel, delegate, null, properties);
 	}
 
-	private void doRegisterProducer(final String name, MessageChannel moduleOutputChannel,
+	private Binding<MessageChannel> doRegisterProducer(final String name, MessageChannel moduleOutputChannel,
 			AmqpOutboundEndpoint delegate, String replyTo, RabbitPropertiesAccessor properties) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		MessageHandler handler = new SendingHandler(delegate, replyTo, properties);
@@ -616,9 +619,10 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		consumer.setBeanFactory(getBeanFactory());
 		consumer.setBeanName("outbound." + name);
 		consumer.afterPropertiesSet();
-		Binding producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer, properties);
+		Binding<MessageChannel> producerBinding = Binding.forProducer(name, moduleOutputChannel, consumer, properties);
 		addBinding(producerBinding);
 		producerBinding.start();
+		return producerBinding;
 	}
 
 	/**
@@ -686,14 +690,10 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 	}
 
 	@Override
-	public void unbindConsumer(String name, String group, MessageChannel channel) {
-		super.unbindConsumer(name, group, channel);
-		cleanAutoDeclareContext(groupedName(name, group));
-	}
-
-	@Override
-	protected void afterUnbindConsumers(String name, String group) {
-		cleanAutoDeclareContext(groupedName(name, group));
+	protected void afterUnbind(Binding<MessageChannel> binding) {
+		if (Binding.Type.consumer.equals(binding.getType())) {
+			cleanAutoDeclareContext(groupedName(binding.getName(), binding.getGroup()));
+		}
 	}
 
 	private void addToAutoDeclareContext(String name, Object bean) {

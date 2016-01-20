@@ -90,15 +90,15 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 		consumerProperties.put("count","3");
 		QueueChannel input0 = new QueueChannel();
 		input0.setBeanName("test.input0S");
-		binder.bindConsumer("part.0", "test", input0, consumerProperties);
+		Binding<MessageChannel> input0Binding = binder.bindConsumer("part.0", "test", input0, consumerProperties);
 		consumerProperties.put("partitionIndex", "1");
 		QueueChannel input1 = new QueueChannel();
 		input1.setBeanName("test.input1S");
-		binder.bindConsumer("part.0", "test", input1, consumerProperties);
+		Binding<MessageChannel> input1Binding = binder.bindConsumer("part.0", "test", input1, consumerProperties);
 		consumerProperties.put("partitionIndex", "2");
 		QueueChannel input2 = new QueueChannel();
 		input2.setBeanName("test.input2S");
-		binder.bindConsumer("part.0", "test", input2, consumerProperties);
+		Binding<MessageChannel> input2Binding = binder.bindConsumer("part.0", "test", input2, consumerProperties);
 
 		Properties producerProperties = new Properties();
 		producerProperties.put("partitionKeyExpression", "payload");
@@ -108,9 +108,9 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 
 		DirectChannel output = new DirectChannel();
 		output.setBeanName("test.output");
-		binder.bindProducer("part.0", output, producerProperties);
+		Binding<MessageChannel> outputBinding = binder.bindProducer("part.0", output, producerProperties);
 		@SuppressWarnings("unchecked")
-		List<Binding> bindings = TestUtils.getPropertyValue(binder, "binder.bindings", List.class);
+		List<Binding<MessageChannel>> bindings = TestUtils.getPropertyValue(binder, "binder.bindings", List.class);
 		assertEquals(4, bindings.size());
 		try {
 			AbstractEndpoint endpoint = bindings.get(3).getEndpoint();
@@ -173,8 +173,10 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 					containsOur3Messages);
 
 		}
-		binder.unbindConsumers("part.0", "test");
-		binder.unbindProducers("part.0");
+		binder.unbind(input0Binding);
+		binder.unbind(input1Binding);
+		binder.unbind(input2Binding);
+		binder.unbind(outputBinding);
 	}
 
 	@Test
@@ -187,15 +189,15 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 		consumerProperties.put("partitionIndex", "0");
 		QueueChannel input0 = new QueueChannel();
 		input0.setBeanName("test.input0J");
-		binder.bindConsumer("partJ.0", "test", input0, consumerProperties);
+		Binding<MessageChannel> input0Binding = binder.bindConsumer("partJ.0", "test", input0, consumerProperties);
 		consumerProperties.put("partitionIndex", "1");
 		QueueChannel input1 = new QueueChannel();
 		input1.setBeanName("test.input1J");
-		binder.bindConsumer("partJ.0", "test", input1, consumerProperties);
+		Binding<MessageChannel> input1Binding = binder.bindConsumer("partJ.0", "test", input1, consumerProperties);
 		consumerProperties.put("partitionIndex", "2");
 		QueueChannel input2 = new QueueChannel();
 		input2.setBeanName("test.input2J");
-		binder.bindConsumer("partJ.0", "test", input2, consumerProperties);
+		Binding<MessageChannel> input2Binding = binder.bindConsumer("partJ.0", "test", input2, consumerProperties);
 
 		Properties producerProperties = new Properties();
 		producerProperties.put("partitionKeyExtractorClass", "org.springframework.cloud.stream.binder.PartitionTestSupport");
@@ -204,9 +206,9 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 		producerProperties.put(BinderPropertyKeys.NEXT_MODULE_CONCURRENCY, "2");
 		DirectChannel output = new DirectChannel();
 		output.setBeanName("test.output");
-		binder.bindProducer("partJ.0", output, producerProperties);
+		Binding<MessageChannel> outputBinding = binder.bindProducer("partJ.0", output, producerProperties);
 		@SuppressWarnings("unchecked")
-		List<Binding> bindings = TestUtils.getPropertyValue(binder, "binder.bindings", List.class);
+		List<Binding<MessageChannel>> bindings = TestUtils.getPropertyValue(binder, "binder.bindings", List.class);
 		assertEquals(4, bindings.size());
 		if (usesExplicitRouting()) {
 			AbstractEndpoint endpoint = bindings.get(3).getEndpoint();
@@ -239,8 +241,10 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 					containsInAnyOrder(0, 1, 2));
 		}
 
-		binder.unbindConsumers("partJ.0", "test");
-		binder.unbindProducers("partJ.0");
+		binder.unbind(input0Binding);
+		binder.unbind(input1Binding);
+		binder.unbind(input2Binding);
+		binder.unbind(outputBinding);
 	}
 
 	/**

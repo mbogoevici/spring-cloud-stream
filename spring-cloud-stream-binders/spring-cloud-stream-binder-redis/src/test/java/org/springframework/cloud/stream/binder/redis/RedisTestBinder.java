@@ -16,18 +16,16 @@
 
 package org.springframework.cloud.stream.binder.redis;
 
+import org.springframework.cloud.stream.binder.AbstractTestBinder;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.integration.channel.DefaultHeaderChannelRegistry;
-import org.springframework.integration.codec.Codec;
 import org.springframework.integration.codec.kryo.PojoCodec;
 import org.springframework.integration.context.IntegrationContextUtils;
 import org.springframework.integration.support.DefaultMessageBuilderFactory;
 import org.springframework.integration.support.utils.IntegrationUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.cloud.stream.binder.AbstractTestBinder;
-
 
 /**
  * Test support class for {@link RedisMessageChannelBinder}.

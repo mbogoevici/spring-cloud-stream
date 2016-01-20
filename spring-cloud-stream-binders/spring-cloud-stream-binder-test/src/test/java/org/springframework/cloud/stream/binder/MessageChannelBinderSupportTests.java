@@ -269,11 +269,13 @@ public class MessageChannelBinderSupportTests {
 	public class TestMessageChannelBinder extends MessageChannelBinderSupport {
 
 		@Override
-		protected void doBindConsumer(String name, String group, MessageChannel channel, Properties properties) {
+		protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel channel, Properties properties) {
+			return null;
 		}
 
 		@Override
-		public void bindProducer(String name, MessageChannel channel, Properties properties) {
+		public Binding<MessageChannel> bindProducer(String name, MessageChannel channel, Properties properties) {
+			return null;
 		}
 	}
 

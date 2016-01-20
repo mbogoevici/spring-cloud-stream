@@ -27,6 +27,7 @@ import org.springframework.messaging.MessageChannel;
  *
  * @author Ilayaperumal Gopinathan
  * @author Gary Russell
+ * @author Mark Fisher
  */
 public abstract class AbstractTestBinder<C extends MessageChannelBinderSupport> implements Binder<MessageChannel> {
 
@@ -45,15 +46,15 @@ public abstract class AbstractTestBinder<C extends MessageChannelBinderSupport> 
 	}
 
 	@Override
-	public void bindConsumer(String name, String group, MessageChannel moduleInputChannel, Properties properties) {
-		binder.bindConsumer(name, group, moduleInputChannel, properties);
+	public Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel moduleInputChannel, Properties properties) {
 		queues.add(name);
+		return binder.bindConsumer(name, group, moduleInputChannel, properties);
 	}
 
 	@Override
-	public void bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
-		binder.bindProducer(name, moduleOutputChannel, properties);
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel moduleOutputChannel, Properties properties) {
 		queues.add(name);
+		return binder.bindProducer(name, moduleOutputChannel, properties); 
 	}
 
 	public C getCoreBinder() {
@@ -63,23 +64,8 @@ public abstract class AbstractTestBinder<C extends MessageChannelBinderSupport> 
 	public abstract void cleanup();
 
 	@Override
-	public void unbindConsumers(String name, String group) {
-		binder.unbindConsumers(name, group);
-	}
-
-	@Override
-	public void unbindProducers(String name) {
-		binder.unbindProducers(name);
-	}
-
-	@Override
-	public void unbindConsumer(String name, String group, MessageChannel channel) {
-		binder.unbindConsumer(name, group, channel);
-	}
-
-	@Override
-	public void unbindProducer(String name, MessageChannel channel) {
-		binder.unbindProducer(name, channel);
+	public void unbind(Binding<MessageChannel> binding) {
+		binder.unbind(binding);
 	}
 
 	public C getBinder() {

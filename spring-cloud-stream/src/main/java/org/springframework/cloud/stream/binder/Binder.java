@@ -39,7 +39,7 @@ public interface Binder<T> {
 	 * @param inboundBindTarget the module interface to be bound as a consumer
 	 * @param properties arbitrary String key/value pairs that will be used in the binding
 	 */
-	void bindConsumer(String name, String group, T inboundBindTarget, Properties properties);
+	Binding<T> bindConsumer(String name, String group, T inboundBindTarget, Properties properties);
 
 	/**
 	 * Bind a message producer on a channel.
@@ -47,35 +47,12 @@ public interface Binder<T> {
 	 * @param outboundBindTarget the module interface bound as a producer
 	 * @param properties arbitrary String key/value pairs that will be used in the binding
 	 */
-	void bindProducer(String name, T outboundBindTarget, Properties properties);
+	Binding<T> bindProducer(String name, T outboundBindTarget, Properties properties);
 
 	/**
-	 * Unbind inbound module components and stop any active components that use the channel
-	 * with the supplied consumer group.
-	 * @param name the channel name
-	 * @param group the consumer group
+	 * Unbind the target component represented by the provided Binding and stop any active components.
+	 * @param binding the Binding instance to unbind
 	 */
-	void unbindConsumers(String name, String group);
-
-	/**
-	 * Unbind outbound module components and stop any active components that use the channel.
-	 * @param name the channel name
-	 */
-	void unbindProducers(String name);
-
-	/**
-	 * Unbind a specific message consumer
-	 * @param name The logical identity of a message source
-	 * @param group The consumer group
-	 * @param inboundBindTarget The module interface bound as a consumer
-	 */
-	void unbindConsumer(String name, String group, T inboundBindTarget);
-
-	/**
-	 * Unbind a specific message producer
-	 * @param name the logical identity of the message target
-	 * @param outboundBindTarget the channel bound as a producer
-	 */
-	void unbindProducer(String name, T outboundBindTarget);
+	void unbind(Binding<T> binding);
 
 }

@@ -41,6 +41,7 @@ import org.springframework.messaging.MessageHeaders;
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
  * @author David Turanski
+ * @author Mark Fisher
  */
 public abstract class AbstractBinderTests {
 
@@ -51,20 +52,20 @@ public abstract class AbstractBinderTests {
 	@Test
 	public void testClean() throws Exception {
 		Binder<MessageChannel> binder = getBinder();
-		binder.bindProducer("foo.0", new DirectChannel(), null);
-		binder.bindConsumer("foo.0", "test", new DirectChannel(), null);
-		binder.bindProducer("foo.1", new DirectChannel(), null);
-		binder.bindConsumer("foo.1", "test", new DirectChannel(), null);
-		binder.bindProducer("foo.2", new DirectChannel(), null);
+		Binding<MessageChannel> foo0ProducerBinding = binder.bindProducer("foo.0", new DirectChannel(), null);
+		Binding<MessageChannel> foo0ConsumerBinding = binder.bindConsumer("foo.0", "test", new DirectChannel(), null);
+		Binding<MessageChannel> foo1ProducerBinding = binder.bindProducer("foo.1", new DirectChannel(), null);
+		Binding<MessageChannel> foo1ConsumerBinding = binder.bindConsumer("foo.1", "test", new DirectChannel(), null);
+		Binding<MessageChannel> foo2ProducerBinding = binder.bindProducer("foo.2", new DirectChannel(), null);
 		Collection<?> bindings = getBindings(binder);
 		assertEquals(5, bindings.size());
-		binder.unbindProducers("foo.0");
+		binder.unbind(foo0ProducerBinding);
 		assertEquals(4, bindings.size());
-		binder.unbindConsumers("foo.0", "test");
-		binder.unbindProducers("foo.1");
+		binder.unbind(foo0ConsumerBinding);
+		binder.unbind(foo1ProducerBinding);
 		assertEquals(2, bindings.size());
-		binder.unbindConsumers("foo.1", "test");
-		binder.unbindProducers("foo.2");
+		binder.unbind(foo1ConsumerBinding);
+		binder.unbind(foo2ProducerBinding);
 		assertTrue(bindings.isEmpty());
 	}
 
@@ -73,8 +74,8 @@ public abstract class AbstractBinderTests {
 		Binder<MessageChannel> binder = getBinder();
 		DirectChannel moduleOutputChannel = new DirectChannel();
 		QueueChannel moduleInputChannel = new QueueChannel();
-		binder.bindProducer("foo.0", moduleOutputChannel, null);
-		binder.bindConsumer("foo.0", "test", moduleInputChannel, null);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("foo.0", moduleOutputChannel, null);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("foo.0", "test", moduleInputChannel, null);
 		Message<?> message = MessageBuilder.withPayload("foo").setHeader(MessageHeaders.CONTENT_TYPE,
 				"foo/bar").build();
 		// Let the consumer actually bind to the producer before sending a msg
@@ -85,8 +86,8 @@ public abstract class AbstractBinderTests {
 		assertEquals("foo", inbound.getPayload());
 		assertNull(inbound.getHeaders().get(BinderHeaders.BINDER_ORIGINAL_CONTENT_TYPE));
 		assertEquals("foo/bar", inbound.getHeaders().get(MessageHeaders.CONTENT_TYPE));
-		binder.unbindProducers("foo.0");
-		binder.unbindConsumers("foo.0", "test");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	@Test
@@ -94,8 +95,8 @@ public abstract class AbstractBinderTests {
 		Binder<MessageChannel> binder = getBinder();
 		DirectChannel moduleOutputChannel = new DirectChannel();
 		QueueChannel moduleInputChannel = new QueueChannel();
-		binder.bindProducer("bar.0", moduleOutputChannel, null);
-		binder.bindConsumer("bar.0", "test", moduleInputChannel, null);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("bar.0", moduleOutputChannel, null);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("bar.0", "test", moduleInputChannel, null);
 		binderBindUnbindLatency();
 
 		Message<?> message = MessageBuilder.withPayload("foo").build();
@@ -105,8 +106,8 @@ public abstract class AbstractBinderTests {
 		assertEquals("foo", inbound.getPayload());
 		assertNull(inbound.getHeaders().get(BinderHeaders.BINDER_ORIGINAL_CONTENT_TYPE));
 		assertNull(inbound.getHeaders().get(MessageHeaders.CONTENT_TYPE));
-		binder.unbindProducers("bar.0");
-		binder.unbindConsumers("bar.0", "test");
+		binder.unbind(producerBinding);
+		binder.unbind(consumerBinding);
 	}
 
 	protected Collection<?> getBindings(Binder<MessageChannel> testBinder) {

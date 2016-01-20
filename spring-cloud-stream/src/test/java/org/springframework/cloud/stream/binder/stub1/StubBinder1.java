@@ -19,9 +19,11 @@ package org.springframework.cloud.stream.binder.stub1;
 import java.util.Properties;
 
 import org.springframework.cloud.stream.binder.Binder;
+import org.springframework.cloud.stream.binder.Binding;
 
 /**
  * @author Marius Bogoevici
+ * @author Mark Fisher
  */
 public class StubBinder1 implements Binder<Object> {
 
@@ -36,33 +38,17 @@ public class StubBinder1 implements Binder<Object> {
 	}
 
 	@Override
-	public void bindConsumer(String name, String group, Object inboundBindTarget, Properties properties) {
-
+	public Binding<Object> bindConsumer(String name, String group, Object inboundBindTarget, Properties properties) {
+		return null;
 	}
 
 	@Override
-	public void bindProducer(String name, Object outboundBindTarget, Properties properties) {
-
+	public Binding<Object> bindProducer(String name, Object outboundBindTarget, Properties properties) {
+		return null;
 	}
 
 	@Override
-	public void unbindConsumers(String name, String group) {
-
-	}
-
-	@Override
-	public void unbindProducers(String name) {
-
-	}
-
-	@Override
-	public void unbindConsumer(String name, String group, Object inboundBindTarget) {
-
-	}
-
-	@Override
-	public void unbindProducer(String name, Object outboundBindTarget) {
-
+	public void unbind(Binding<Object> binding) {
 	}
 
 }

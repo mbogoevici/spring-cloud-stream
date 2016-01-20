@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.springframework.cloud.stream.binder.Binder;
 import org.springframework.cloud.stream.binder.BinderConfiguration;
 import org.springframework.cloud.stream.binder.BinderType;
+import org.springframework.cloud.stream.binder.Binding;
 import org.springframework.cloud.stream.binder.DefaultBinderFactory;
 import org.springframework.cloud.stream.config.BindingProperties;
 import org.springframework.cloud.stream.config.ChannelBindingServiceProperties;
@@ -57,10 +58,10 @@ public class ChannelBindingServiceTests {
 		Binder<MessageChannel> binder = binderFactory.getBinder("mock");
 		ChannelBindingService service = new ChannelBindingService(properties, binderFactory);
 		MessageChannel inputChannel = new DirectChannel();
-		service.bindConsumer(inputChannel, name);
+		Binding<MessageChannel> binding = service.bindConsumer(inputChannel, name);
 		service.unbindConsumers(name);
 		verify(binder).bindConsumer(name, props.getGroup(), inputChannel, properties.getConsumerProperties(name));
-		verify(binder).unbindConsumers(name, props.getGroup());
+		verify(binder).unbind(binding);
 		binderFactory.destroy();
 	}
 
@@ -80,10 +81,10 @@ public class ChannelBindingServiceTests {
 		Binder<MessageChannel> binder = binderFactory.getBinder("mock");
 		ChannelBindingService service = new ChannelBindingService(properties, binderFactory);
 		MessageChannel inputChannel = new DirectChannel();
-		service.bindConsumer(inputChannel, name);
+		Binding<MessageChannel> binding = service.bindConsumer(inputChannel, name);
 		service.unbindConsumers(name);
 		verify(binder).bindConsumer(name, props.getGroup(), inputChannel, properties.getConsumerProperties(name));
-		verify(binder).unbindConsumers(name, props.getGroup());
+		verify(binder).unbind(binding);
 		binderFactory.destroy();
 	}
 
