@@ -38,10 +38,7 @@ public class BindingProperties {
 	 */
 	private String destination;
 
-	/**
-	 * Unique name that the binding belongs to.
-	 */
-	private String group = UUID.randomUUID().toString();
+	private String group;
 
 	// Properties for both inbound/outbound
 

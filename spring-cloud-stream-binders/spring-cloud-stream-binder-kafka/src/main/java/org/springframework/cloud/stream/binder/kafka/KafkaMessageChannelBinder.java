@@ -37,7 +37,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.cloud.stream.binder.AbstractBindingPropertiesAccessor;
+import org.springframework.cloud.stream.binder.DefaultBindingPropertiesAccessor;
 import org.springframework.cloud.stream.binder.BinderException;
 import org.springframework.cloud.stream.binder.BinderHeaders;
 import org.springframework.cloud.stream.binder.BinderPropertyKeys;
@@ -732,7 +732,7 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 		}
 	}
 
-	private class KafkaPropertiesAccessor extends AbstractBindingPropertiesAccessor {
+	private class KafkaPropertiesAccessor extends DefaultBindingPropertiesAccessor {
 
 		public KafkaPropertiesAccessor(Properties properties) {
 			super(properties);
