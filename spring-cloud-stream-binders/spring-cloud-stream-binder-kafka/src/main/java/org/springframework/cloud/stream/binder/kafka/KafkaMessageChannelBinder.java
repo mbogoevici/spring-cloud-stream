@@ -448,7 +448,7 @@ public class KafkaMessageChannelBinder extends MessageChannelBinderSupport {
 		// but multiple instances of this binding will each get all messages
 		// PubSub consumers reset at the latest time, which allows them to receive only messages sent after
 		// they've been bound
-		String consumerGroup = group == null ? UUID.randomUUID().toString() : group;
+		String consumerGroup = group == null ? "anonymous." + UUID.randomUUID().toString() : group;
 		return createKafkaConsumer(name, inputChannel, properties, consumerGroup, OffsetRequest.LatestTime());
 	}
 

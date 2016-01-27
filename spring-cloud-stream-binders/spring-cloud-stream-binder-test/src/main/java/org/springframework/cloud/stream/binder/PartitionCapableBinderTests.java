@@ -56,7 +56,7 @@ abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 
 	@Test
 	@SuppressWarnings("unchecked")
-	public void testDefaultGroup() throws Exception {
+	public void testAnonymousGroup() throws Exception {
 		Binder<MessageChannel> binder = getBinder();
 		DirectChannel output = new DirectChannel();
 		Properties properties = new Properties();

@@ -63,12 +63,12 @@ public class ChannelBindingServiceTests {
 		Binder<MessageChannel> binder = binderFactory.getBinder("mock");
 		ChannelBindingService service = new ChannelBindingService(properties, binderFactory);
 		MessageChannel inputChannel = new DirectChannel();
-		Binding<MessageChannel> defaultBinding = Binding.forConsumer("foo", null, Mockito.mock(AbstractEndpoint.class),
+		Binding<MessageChannel> mockBinding = Binding.forConsumer("foo", null, Mockito.mock(AbstractEndpoint.class),
 				inputChannel, null);
 		Mockito.when(binder.bindConsumer("foo", null, inputChannel, new Properties()))
-				.thenReturn(defaultBinding);
+				.thenReturn(mockBinding);
 		Binding<MessageChannel> binding = service.bindConsumer(inputChannel, name);
-		Assert.assertThat(binding, sameInstance(defaultBinding));
+		Assert.assertThat(binding, sameInstance(mockBinding));
 		service.unbindConsumers(name);
 		verify(binder).bindConsumer(name, props.getGroup(), inputChannel, properties.getConsumerProperties(name));
 		verify(binder).unbind(binding);
@@ -92,12 +92,12 @@ public class ChannelBindingServiceTests {
 		Binder<MessageChannel> binder = binderFactory.getBinder("mock");
 		ChannelBindingService service = new ChannelBindingService(properties, binderFactory);
 		MessageChannel inputChannel = new DirectChannel();
-		Binding<MessageChannel> defaultBinding = Binding.forConsumer("foo", "fooGroup", Mockito.mock(AbstractEndpoint.class),
+		Binding<MessageChannel> mockBinding = Binding.forConsumer("foo", "fooGroup", Mockito.mock(AbstractEndpoint.class),
 				inputChannel, null);
 		Mockito.when(binder.bindConsumer("foo", "fooGroup", inputChannel, new Properties()))
-				.thenReturn(defaultBinding);
+				.thenReturn(mockBinding);
 		Binding<MessageChannel> binding = service.bindConsumer(inputChannel, name);
-		Assert.assertThat(binding, sameInstance(defaultBinding));
+		Assert.assertThat(binding, sameInstance(mockBinding));
 		service.unbindConsumers(name);
 		verify(binder).bindConsumer(name, props.getGroup(), inputChannel, properties.getConsumerProperties(name));
 		verify(binder).unbind(binding);

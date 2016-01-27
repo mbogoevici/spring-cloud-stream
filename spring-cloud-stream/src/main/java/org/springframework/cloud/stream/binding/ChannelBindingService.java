@@ -81,10 +81,8 @@ public class ChannelBindingService {
 		if (binding != null) {
 			binder.unbind(binding);
 		}
-		else {
-			if (log.isWarnEnabled()) {
-				log.warn("Trying to unbind channel '" + inputChannelName + "', but no binding found.");
-			}
+		else if (log.isWarnEnabled()) {
+			log.warn("Trying to unbind channel '" + inputChannelName + "', but no binding found.");
 		}
 	}
 
@@ -94,10 +92,8 @@ public class ChannelBindingService {
 		if (binding != null) {
 			binder.unbind(binding);
 		}
-		else {
-			if (log.isWarnEnabled()) {
-				log.warn("Trying to unbind channel '" + outputChannelName + "', but no binding found.");
-			}
+		else if (log.isWarnEnabled()) {
+			log.warn("Trying to unbind channel '" + outputChannelName + "', but no binding found.");
 		}
 	}
 

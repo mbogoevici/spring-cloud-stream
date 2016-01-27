@@ -138,7 +138,7 @@ public class RedisMessageChannelBinder extends MessageChannelBinderSupport imple
 	@Override
 	protected Binding<MessageChannel> doBindConsumer(final String name, String group, MessageChannel moduleInputChannel, Properties properties) {
 		if (!StringUtils.hasText(group)) {
-			group = UUID.randomUUID().toString();
+			group = "anonymous." + UUID.randomUUID().toString();
 		}
 		RedisPropertiesAccessor accessor = new RedisPropertiesAccessor(properties);
 		String queueName = groupedName(name, group);

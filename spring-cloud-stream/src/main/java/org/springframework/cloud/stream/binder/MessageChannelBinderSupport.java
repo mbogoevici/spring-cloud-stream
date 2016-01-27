@@ -366,9 +366,9 @@ public abstract class MessageChannelBinderSupport
 		DefaultBindingPropertiesAccessor accessor = new DefaultBindingPropertiesAccessor(properties);
 		if (StringUtils.isEmpty(group)) {
 			Assert.isTrue(!accessor.getProperty(BinderPropertyKeys.DURABLE, defaultDurableSubscription),
-					"Empty groups cannot be specified on durable subscriptions");
+					"A consumer group is required for a durable subscription");
 			Assert.isTrue(accessor.getPartitionIndex() < 0,
-					"Empty groups cannot be specified on partitioned subscriptions");
+					"A consumer group is required for a partitioned subscription");
 		}
 		return doBindConsumer(name, group, inputChannel, properties);
 	}

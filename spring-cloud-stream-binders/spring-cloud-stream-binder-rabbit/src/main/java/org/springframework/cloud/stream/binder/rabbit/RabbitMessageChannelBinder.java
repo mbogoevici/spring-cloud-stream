@@ -34,7 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.amqp.AmqpConnectException;
+import org.springframework.amqp.UncategorizedAmqpException;
 import org.springframework.amqp.core.AcknowledgeMode;
+import org.springframework.amqp.core.AnonymousQueue;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Exchange;
@@ -106,6 +108,9 @@ import org.springframework.util.StringUtils;
  * @author Marius Bogoevici
  */
 public class RabbitMessageChannelBinder extends MessageChannelBinderSupport implements DisposableBean {
+
+	public static final AnonymousQueue.Base64UrlNamingStrategy ANONYMOUS_GROUP_NAME_GENERATOR
+			= new AnonymousQueue.Base64UrlNamingStrategy("anonymous.");
 
 	private static final AcknowledgeMode DEFAULT_ACKNOWLEDGE_MODE = AcknowledgeMode.AUTO;
 
@@ -389,9 +394,9 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 
 	@Override
 	public Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputChannel, Properties properties) {
-		boolean groupedConsumer = StringUtils.hasText(group);
-		String baseQueueName = groupedConsumer ? groupedName(name, group) :
-				groupedName(name, "anonymous." + System.currentTimeMillis());
+		boolean anonymousConsumer = !StringUtils.hasText(group);
+		String baseQueueName = anonymousConsumer ? groupedName(name, ANONYMOUS_GROUP_NAME_GENERATOR.generateName())
+				: groupedName(name, group);
 		if (this.logger.isInfoEnabled()) {
 			this.logger.info("declaring queue for inbound: " + baseQueueName + ", bound to: " + name);
 		}
@@ -403,11 +408,14 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 		declareExchange(exchangeName, exchange);
 
 		String queueName = applyPrefix(prefix, baseQueueName);
-		boolean partitioned = groupedConsumer && accessor.getPartitionIndex() >= 0;
-		boolean durable = groupedConsumer && accessor.isDurable(this.defaultDurableSubscription);
+		boolean partitioned = !anonymousConsumer && accessor.getPartitionIndex() >= 0;
+		boolean durable = !anonymousConsumer && accessor.isDurable(this.defaultDurableSubscription);
 		Queue queue;
 
-		if (groupedConsumer) {
+		if (anonymousConsumer) {
+			queue = new Queue(queueName, false, true, true);
+		}
+		else {
 			if (partitioned) {
 				String partitionSuffix = "-" + accessor.getPartitionIndex();
 				queueName += partitionSuffix;
@@ -418,9 +426,6 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 			else {
 				queue = new Queue(queueName, false, false, true);
 			}
-		}
-		else {
-			queue = new Queue(queueName, false, true, true);
 		}
 
 		declareQueue(queueName, queue);
@@ -668,9 +673,14 @@ public class RabbitMessageChannelBinder extends MessageChannelBinderSupport impl
 				logger.debug("Declaration of queue: " + queue.getName() + " deferred - connection not available");
 			}
 		}
-		catch (NullPointerException e) {
-			// Fix for https://jira.spring.io/browse/AMQP-565, remove once fixed
-			// We need to swallow the NPE thrown by `declareQueue`
+		catch (UncategorizedAmqpException e) {
+			if (e.getCause() instanceof NullPointerException) {
+				// Temporary fix for https://jira.spring.io/browse/AMQP-565
+				// TODO remove once Spring AMQP is upgraded beyond 1.5.4
+			}
+			else {
+				throw e;
+			}
 		}
 		addToAutoDeclareContext(beanName, queue);
 	}
