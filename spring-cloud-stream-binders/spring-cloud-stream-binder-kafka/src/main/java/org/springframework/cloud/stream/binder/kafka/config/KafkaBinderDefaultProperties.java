@@ -20,9 +20,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
+ * @author Marius Bogoevici
  */
-@ConfigurationProperties(value = "spring.cloud.stream.binder.kafka.default",
-		locations = "classpath:/META-INF/spring-cloud-stream/kafka-binder.properties")
+@ConfigurationProperties(value = "spring.cloud.stream.binder.kafka.default")
 public class KafkaBinderDefaultProperties {
 
 	private int batchSize;

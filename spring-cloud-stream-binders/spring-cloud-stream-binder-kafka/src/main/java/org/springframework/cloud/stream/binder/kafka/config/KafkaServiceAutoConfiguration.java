@@ -17,6 +17,7 @@
 package org.springframework.cloud.stream.binder.kafka.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.Binder;
@@ -25,6 +26,7 @@ import org.springframework.cloud.stream.config.codec.kryo.KryoCodecAutoConfigura
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.integration.codec.Codec;
 import org.springframework.integration.kafka.support.LoggingProducerListener;
 import org.springframework.integration.kafka.support.ProducerListener;
@@ -40,8 +42,9 @@ import org.springframework.util.ObjectUtils;
  */
 @Configuration
 @ConditionalOnMissingBean(Binder.class)
-@Import({KryoCodecAutoConfiguration.class})
+@Import({KryoCodecAutoConfiguration.class, PropertyPlaceholderAutoConfiguration.class})
 @EnableConfigurationProperties({KafkaBinderConfigurationProperties.class, KafkaBinderDefaultProperties.class})
+@PropertySource("classpath:/META-INF/spring-cloud-stream/kafka-binder.properties")
 public class KafkaServiceAutoConfiguration {
 
 	@Autowired
