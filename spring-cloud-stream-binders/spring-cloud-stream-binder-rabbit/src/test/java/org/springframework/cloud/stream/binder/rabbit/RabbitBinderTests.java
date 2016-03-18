@@ -55,11 +55,14 @@ import org.springframework.amqp.support.postprocessor.DelegatingDecompressingPos
 import org.springframework.amqp.utils.test.TestUtils;
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.cloud.stream.binder.Binding;
+import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.PartitionCapableBinderTests;
 import org.springframework.cloud.stream.binder.PartitionKeyExtractorStrategy;
 import org.springframework.cloud.stream.binder.PartitionSelectorStrategy;
 import org.springframework.cloud.stream.binder.PartitionTestSupport;
+import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
+import org.springframework.cloud.stream.binder.rabbit.config.RabbitBinderProperties;
 import org.springframework.cloud.stream.test.junit.rabbit.RabbitTestSupport;
 import org.springframework.context.ApplicationContext;
 import org.springframework.expression.spel.standard.SpelExpression;
@@ -79,7 +82,7 @@ import org.springframework.messaging.support.GenericMessage;
  * @author Gary Russell
  * @author David Turanski
  */
-public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBinder, RabbitConsumerProperties, RabbitProducerProperties> {
+public class RabbitBinderTests extends PartitionCapableBinderTests {
 
 	private final String CLASS_UNDER_TEST_NAME = RabbitMessageChannelBinder.class.getSimpleName();
 
@@ -90,20 +93,24 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 
 	@Override
 	protected RabbitTestBinder getBinder() {
+		return getBinder(new RabbitBinderProperties());
+	}
+
+	protected RabbitTestBinder getBinder(RabbitBinderProperties binderProperties) {
 		if (testBinder == null) {
-			testBinder = new RabbitTestBinder(rabbitAvailableRule.getResource());
+			testBinder = new RabbitTestBinder(rabbitAvailableRule.getResource(), binderProperties);
 		}
-		return testBinder;
+		return (RabbitTestBinder) testBinder;
 	}
 
 	@Override
-	protected RabbitConsumerProperties createConsumerProperties() {
-		return new RabbitConsumerProperties();
+	protected ConsumerProperties createConsumerProperties() {
+		return new ConsumerProperties();
 	}
 
 	@Override
-	protected RabbitProducerProperties createProducerProperties() {
-		return new RabbitProducerProperties();
+	protected ProducerProperties createProducerProperties() {
+		return new ProducerProperties();
 	}
 
 	@Override
@@ -116,8 +123,8 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		RabbitTestBinder binder = getBinder();
 		DirectChannel moduleOutputChannel = new DirectChannel();
 		DirectChannel moduleInputChannel = new DirectChannel();
-		Binding<MessageChannel> producerBinding = binder.bindProducer("bad.0", moduleOutputChannel, new RabbitProducerProperties());
-		Binding<MessageChannel> consumerBinding = binder.bindConsumer("bad.0", "test", moduleInputChannel, new RabbitConsumerProperties());
+		Binding<MessageChannel> producerBinding = binder.bindProducer("bad.0", moduleOutputChannel, new ProducerProperties());
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("bad.0", "test", moduleInputChannel, new ConsumerProperties());
 		Message<?> message = MessageBuilder.withPayload("bad").setHeader(MessageHeaders.CONTENT_TYPE,
 				"foo/bar").build();
 		final CountDownLatch latch = new CountDownLatch(3);
@@ -136,17 +143,18 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 	}
 
 	@Test
-	public void testConsumerProperties() throws Exception {
-		RabbitTestBinder binder = getBinder();
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setTransacted(true);
-		Binding<MessageChannel> consumerBinding = binder.bindConsumer("props.0", null, new DirectChannel(), properties);
+	public void testConsumerPropertiesWithDefaultsAndTransacted() throws Exception {
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setTransacted(true);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("props.0", null, new DirectChannel(), new ConsumerProperties());
 		AbstractEndpoint endpoint = extractEndpoint(consumerBinding);
 		SimpleMessageListenerContainer container = TestUtils.getPropertyValue(endpoint, "messageListenerContainer",
 				SimpleMessageListenerContainer.class);
 		assertEquals(AcknowledgeMode.AUTO, container.getAcknowledgeMode());
 		assertThat(container.getQueueNames()[0],
-				startsWith(properties.getPrefix()));
+				startsWith(binderProperties.getPrefix()));
 		assertTrue(TestUtils.getPropertyValue(container, "transactional", Boolean.class));
 		assertEquals(1, TestUtils.getPropertyValue(container, "concurrentConsumers"));
 		assertNull(TestUtils.getPropertyValue(container, "maxConcurrentConsumers"));
@@ -160,36 +168,42 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		assertEquals(2.0, TestUtils.getPropertyValue(retry, "retryOperations.backOffPolicy.multiplier"));
 		consumerBinding.unbind();
 		assertFalse(endpoint.isRunning());
+	}
 
-		properties = new RabbitConsumerProperties();
-		properties.setAcknowledgeMode(AcknowledgeMode.NONE);
+	@Test
+	public void testConsumerProperties2() throws Exception {
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setAcknowledgeMode(AcknowledgeMode.NONE);
+		binderProperties.setPrefix("foo.");
+		binderProperties.setMaxConcurrency(3);
+		binderProperties.setPrefix("foo.");
+		binderProperties.setPrefetch(20);
+		binderProperties.setRequestHeaderPatterns(new String[] {"foo"});
+		binderProperties.setRequeueRejected(false);
+		binderProperties.setTxSize(10);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setBackOffInitialInterval(2000);
 		properties.setBackOffMaxInterval(20000);
 		properties.setBackOffMultiplier(5.0);
 		properties.setConcurrency(2);
 		properties.setMaxAttempts(23);
-		properties.setMaxConcurrency(3);
-		properties.setPrefix("foo.");
-		properties.setPrefetch(20);
-		properties.setRequestHeaderPatterns(new String[] {"foo"});
-		properties.setRequeueRejected(false);
-		properties.setTxSize(10);
 		properties.setInstanceIndex(0);
-		consumerBinding = binder.bindConsumer("props.0", "test", new DirectChannel(), properties);
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("props.0", "test", new DirectChannel(), properties);
 
-		endpoint = extractEndpoint(consumerBinding);
-		container = verifyContainer(endpoint);
+		AbstractEndpoint endpoint = extractEndpoint(consumerBinding);
+		SimpleMessageListenerContainer container = verifyContainer(endpoint);
 
 		assertEquals("foo.props.0.test", container.getQueueNames()[0]);
-
 		consumerBinding.unbind();
 		assertFalse(endpoint.isRunning());
 	}
 
 	@Test
-	public void testProducerProperties() throws Exception {
+	public void testProducerPropertiesWithDefaultBinderSettings() throws Exception {
 		RabbitTestBinder binder = getBinder();
-		Binding<MessageChannel> producerBinding = binder.bindProducer("props.0", new DirectChannel(), new RabbitProducerProperties());
+		Binding<MessageChannel> producerBinding = binder.bindProducer("props.0", new DirectChannel(), new ProducerProperties());
 		@SuppressWarnings("unchecked")
 		AbstractEndpoint endpoint = extractEndpoint(producerBinding);
 		MessageDeliveryMode mode = TestUtils.getPropertyValue(endpoint, "handler.delegate.defaultDeliveryMode",
@@ -201,25 +215,32 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		producerBinding.unbind();
 		assertFalse(endpoint.isRunning());
 		assertFalse(TestUtils.getPropertyValue(endpoint, "handler.delegate.amqpTemplate.transactional", Boolean.class));
+	}
 
-		RabbitProducerProperties properties = new RabbitProducerProperties();
-		properties.setPrefix("foo.");
-		properties.setDeliveryMode(MessageDeliveryMode.NON_PERSISTENT);
-		properties.setRequestHeaderPatterns(new String[] {"foo"});
+
+	@Test
+	public void testProducerPropertiesWithCustomBinderSettings() throws Exception {
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix("foo.");
+		binderProperties.setDeliveryMode(MessageDeliveryMode.NON_PERSISTENT);
+		binderProperties.setRequestHeaderPatterns(new String[] {"foo"});
+		binderProperties.setTransacted(true);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ProducerProperties properties = new ProducerProperties();
 		properties.setPartitionKeyExpression(spelExpressionParser.parseExpression("'foo'"));
 		properties.setPartitionKeyExtractorClass(TestPartitionKeyExtractorClass.class);
 		properties.setPartitionSelectorExpression(spelExpressionParser.parseExpression("0"));
 		properties.setPartitionSelectorClass(TestPartitionSelectorClass.class);
 		properties.setPartitionCount(1);
-		properties.setTransacted(true);
 
-		producerBinding = binder.bindProducer("props.0", new DirectChannel(), properties);
-		endpoint = extractEndpoint(producerBinding);
+		Binding<MessageChannel> producerBinding = binder.bindProducer("props.0", new DirectChannel(), properties);
+		AbstractEndpoint endpoint = extractEndpoint(producerBinding);
 		assertEquals(
 				"'props.0-' + headers['partition']",
 				TestUtils.getPropertyValue(endpoint, "handler.delegate.routingKeyExpression",
 						SpelExpression.class).getExpressionString());
-		mode = TestUtils.getPropertyValue(endpoint, "handler.delegate.defaultDeliveryMode",
+		MessageDeliveryMode mode = TestUtils.getPropertyValue(endpoint, "handler.delegate.defaultDeliveryMode",
 				MessageDeliveryMode.class);
 		assertEquals(MessageDeliveryMode.NON_PERSISTENT, mode);
 		assertTrue(TestUtils.getPropertyValue(endpoint, "handler.delegate.amqpTemplate.transactional", Boolean.class));
@@ -233,14 +254,17 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 	public void testDurablePubSubWithAutoBindDLQ() throws Exception {
 		RabbitAdmin admin = new RabbitAdmin(this.rabbitAvailableRule.getResource());
 
-		RabbitTestBinder binder = getBinder();
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix(TEST_PREFIX);
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setDurableSubscription(true);
+		binderProperties.setRequeueRejected(false);
 
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setPrefix(TEST_PREFIX);
-		properties.setAutoBindDlq(true);
-		properties.setDurableSubscription(true);
+		RabbitTestBinder binder = getBinder(binderProperties);
+
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setMaxAttempts(1); // disable retry
-		properties.setRequeueRejected(false);
+
 		DirectChannel moduleInputChannel = new DirectChannel();
 		moduleInputChannel.setBeanName("durableTest");
 		moduleInputChannel.subscribe(new MessageHandler() {
@@ -275,13 +299,16 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 	public void testNonDurablePubSubWithAutoBindDLQ() throws Exception {
 		RabbitAdmin admin = new RabbitAdmin(this.rabbitAvailableRule.getResource());
 
-		RabbitTestBinder binder = getBinder();
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setPrefix(TEST_PREFIX);
-		properties.setAutoBindDlq(true);
-		properties.setDurableSubscription(false);
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix(TEST_PREFIX);
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setDurableSubscription(false);
+		binderProperties.setRequeueRejected(false);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setMaxAttempts(1); // disable retry
-		properties.setRequeueRejected(false);
 		DirectChannel moduleInputChannel = new DirectChannel();
 		moduleInputChannel.setBeanName("nondurabletest");
 		moduleInputChannel.subscribe(new MessageHandler() {
@@ -300,13 +327,16 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 
 	@Test
 	public void testAutoBindDLQ() throws Exception {
-		RabbitTestBinder binder = getBinder();
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setPrefix(TEST_PREFIX);
-		properties.setAutoBindDlq(true);
+
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix(TEST_PREFIX);
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setRequeueRejected(false);
+		binderProperties.setDurableSubscription(true);
+		RabbitTestBinder binder = getBinder(binderProperties);
+
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setMaxAttempts(1); // disable retry
-		properties.setRequeueRejected(false);
-		properties.setDurableSubscription(true);
 		DirectChannel moduleInputChannel = new DirectChannel();
 		moduleInputChannel.setBeanName("dlqTest");
 		moduleInputChannel.subscribe(new MessageHandler() {
@@ -345,12 +375,13 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 
 	@Test
 	public void testAutoBindDLQPartionedConsumerFirst() throws Exception {
-		RabbitTestBinder binder = getBinder();
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setPrefix("bindertest.");
-		properties.setAutoBindDlq(true);
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix("bindertest.");
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setRequeueRejected(false);
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setMaxAttempts(1); // disable retry
-		properties.setRequeueRejected(false);
 		properties.setPartitioned(true);
 		properties.setInstanceIndex(0);
 		DirectChannel input0 = new DirectChannel();
@@ -364,9 +395,7 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		Binding<MessageChannel> input1Binding = binder.bindConsumer("partDLQ.0", "dlqPartGrp", input1, properties);
 		Binding<MessageChannel> defaultConsumerBinding2 = binder.bindConsumer("partDLQ.0", "default", new QueueChannel(), properties);
 
-		RabbitProducerProperties producerProperties = new RabbitProducerProperties();
-		producerProperties.setPrefix("bindertest.");
-		producerProperties.setAutoBindDlq(true);
+		ProducerProperties producerProperties = new ProducerProperties();
 		producerProperties.setPartitionKeyExtractorClass(PartitionTestSupport.class);
 		producerProperties.setPartitionSelectorClass(PartitionTestSupport.class);
 		producerProperties.setPartitionCount(2);
@@ -431,11 +460,14 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 
 	@Test
 	public void testAutoBindDLQPartitionedProducerFirst() throws Exception {
-		RabbitTestBinder binder = getBinder();
-		RabbitProducerProperties properties = new RabbitProducerProperties();
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix("bindertest.");
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setRequeueRejected(false);
 
-		properties.setPrefix("bindertest.");
-		properties.setAutoBindDlq(true);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ProducerProperties properties = new ProducerProperties();
 		properties.setRequiredGroups("dlqPartGrp");
 		properties.setPartitionKeyExtractorClass(PartitionTestSupport.class);
 		properties.setPartitionSelectorClass(PartitionTestSupport.class);
@@ -444,11 +476,8 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		output.setBeanName("test.output");
 		Binding<MessageChannel> outputBinding = binder.bindProducer("partDLQ.1", output, properties);
 
-		RabbitConsumerProperties consumerProperties = new RabbitConsumerProperties();
-		consumerProperties.setPrefix("bindertest.");
-		consumerProperties.setAutoBindDlq(true);
+		ConsumerProperties consumerProperties = new ConsumerProperties();
 		consumerProperties.setMaxAttempts(1); // disable retry
-		consumerProperties.setRequeueRejected(false);
 		consumerProperties.setPartitioned(true);
 		consumerProperties.setInstanceIndex(0);
 		DirectChannel input0 = new DirectChannel();
@@ -526,14 +555,16 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 		Queue queue = new Queue(TEST_PREFIX + "dlqpubtest.default", true, false, false, args);
 		admin.declareQueue(queue);
 
-		RabbitTestBinder binder = getBinder();
-		RabbitConsumerProperties properties = new RabbitConsumerProperties();
-		properties.setPrefix(TEST_PREFIX);
-		properties.setAutoBindDlq(true);
-		properties.setRepublishToDlq(true);
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setPrefix(TEST_PREFIX);
+		binderProperties.setAutoBindDlq(true);
+		binderProperties.setRepublishToDlq(true);
+		binderProperties.setRequeueRejected(false);
+		binderProperties.setDurableSubscription(true);
+
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ConsumerProperties properties = new ConsumerProperties();
 		properties.setMaxAttempts(1); // disable retry
-		properties.setRequeueRejected(false);
-		properties.setDurableSubscription(true);
 		DirectChannel moduleInputChannel = new DirectChannel();
 		moduleInputChannel.setBeanName("dlqPubTest");
 		moduleInputChannel.subscribe(new MessageHandler() {
@@ -568,21 +599,22 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 	@Test
 	public void testBatchingAndCompression() throws Exception {
 		RabbitTemplate template = new RabbitTemplate(this.rabbitAvailableRule.getResource());
-		RabbitTestBinder binder = getBinder();
-		RabbitProducerProperties properties = new RabbitProducerProperties();
-		properties.setDeliveryMode(MessageDeliveryMode.NON_PERSISTENT);
-		properties.setBatchingEnabled(true);
-		properties.setBatchSize(2);
-		properties.setBatchBufferLimit(100000);
-		properties.setBatchTimeout(30000);
-		properties.setCompress(true);
+		RabbitBinderProperties binderProperties = new RabbitBinderProperties();
+		binderProperties.setDeliveryMode(MessageDeliveryMode.NON_PERSISTENT);
+		binderProperties.setBatchingEnabled(true);
+		binderProperties.setBatchSize(2);
+		binderProperties.setBatchBufferLimit(100000);
+		binderProperties.setBatchTimeout(30000);
+		binderProperties.setCompress(true);
+		RabbitTestBinder binder = getBinder(binderProperties);
+		ProducerProperties properties = new ProducerProperties();
 		properties.setRequiredGroups("default");
 
 		DirectChannel output = new DirectChannel();
 		output.setBeanName("batchingProducer");
 		Binding<MessageChannel> producerBinding = binder.bindProducer("batching.0", output, properties);
 
-		while (template.receive(properties.getPrefix() + "batching.0.default") != null) {
+		while (template.receive(binderProperties.getPrefix() + "batching.0.default") != null) {
 		}
 
 		Log logger = spy(TestUtils.getPropertyValue(binder, "binder.compressingPostProcessor.logger", Log.class));
@@ -605,7 +637,7 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 
 		QueueChannel input = new QueueChannel();
 		input.setBeanName("batchingConsumer");
-		Binding<MessageChannel> consumerBinding = binder.bindConsumer("batching.0", "test", input, new RabbitConsumerProperties());
+		Binding<MessageChannel> consumerBinding = binder.bindConsumer("batching.0", "test", input, new ConsumerProperties());
 
 		output.send(new GenericMessage<>("foo".getBytes()));
 		output.send(new GenericMessage<>("bar".getBytes()));
@@ -630,56 +662,55 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 	public void testLateBinding() throws Exception {
 		RabbitTestSupport.RabbitProxy proxy = new RabbitTestSupport.RabbitProxy();
 		CachingConnectionFactory cf = new CachingConnectionFactory("localhost", proxy.getPort());
-		RabbitMessageChannelBinder rabbitBinder = new RabbitMessageChannelBinder(cf);
-		RabbitTestBinder binder = new RabbitTestBinder(cf, rabbitBinder);
 
-		RabbitProducerProperties properties = new RabbitProducerProperties();
-		properties.setPrefix("latebinder.");
-		properties.setAutoBindDlq(true);
+		RabbitBinderProperties rabbitBinderProperties = new RabbitBinderProperties();
+		rabbitBinderProperties.setPrefix("latebinder.");
+
+		RabbitTestBinder binder = new RabbitTestBinder(cf, rabbitBinderProperties);
+		rabbitBinderProperties.setAutoBindDlq(true);
+
+		ProducerProperties producerProperties = new ProducerProperties();
 
 		MessageChannel moduleOutputChannel = new DirectChannel();
-		Binding<MessageChannel> late0ProducerBinding = binder.bindProducer("late.0", moduleOutputChannel, properties);
+		Binding<MessageChannel> late0ProducerBinding = binder.bindProducer("late.0", moduleOutputChannel, producerProperties);
 
 		QueueChannel moduleInputChannel = new QueueChannel();
-		RabbitConsumerProperties rabbitConsumerProperties = new RabbitConsumerProperties();
-		rabbitConsumerProperties.setPrefix("latebinder.");
+		ConsumerProperties rabbitConsumerProperties = new ConsumerProperties();
 		Binding<MessageChannel> late0ConsumerBinding = binder.bindConsumer("late.0", "test", moduleInputChannel, rabbitConsumerProperties);
 
-		properties.setPartitionKeyExpression(spelExpressionParser.parseExpression("payload.equals('0') ? 0 : 1"));
-		properties.setPartitionSelectorExpression(spelExpressionParser.parseExpression("hashCode()"));
-		properties.setPartitionCount(2);
+		producerProperties.setPartitionKeyExpression(spelExpressionParser.parseExpression("payload.equals('0') ? 0 : 1"));
+		producerProperties.setPartitionSelectorExpression(spelExpressionParser.parseExpression("hashCode()"));
+		producerProperties.setPartitionCount(2);
 
 		MessageChannel partOutputChannel = new DirectChannel();
-		Binding<MessageChannel> partlate0ProducerBinding = binder.bindProducer("partlate.0", partOutputChannel, properties);
+		Binding<MessageChannel> partlate0ProducerBinding = binder.bindProducer("partlate.0", partOutputChannel, producerProperties);
 
 		QueueChannel partInputChannel0 = new QueueChannel();
 		QueueChannel partInputChannel1 = new QueueChannel();
 
-		RabbitConsumerProperties partLateConsumerProperties = new RabbitConsumerProperties();
-		partLateConsumerProperties.setPrefix("latebinder.");
+		ConsumerProperties partLateConsumerProperties = new ConsumerProperties();
 		partLateConsumerProperties.setPartitioned(true);
 		partLateConsumerProperties.setInstanceIndex(0);
 		Binding<MessageChannel> partlate0Consumer0Binding = binder.bindConsumer("partlate.0", "test", partInputChannel0, partLateConsumerProperties);
 		partLateConsumerProperties.setInstanceIndex(1);
 		Binding<MessageChannel> partlate0Consumer1Binding = binder.bindConsumer("partlate.0", "test", partInputChannel1, partLateConsumerProperties);
 
-		RabbitProducerProperties noDlqProducerProperties = new RabbitProducerProperties();
-		noDlqProducerProperties.setPrefix("latebinder.");
+		rabbitBinderProperties.setAutoBindDlq(false);
+		ProducerProperties noDlqProducerProperties = new ProducerProperties();
 		MessageChannel noDLQOutputChannel = new DirectChannel();
 		Binding<MessageChannel> noDlqProducerBinding = binder.bindProducer("lateNoDLQ.0", noDLQOutputChannel, noDlqProducerProperties);
 
 		QueueChannel noDLQInputChannel = new QueueChannel();
-		RabbitConsumerProperties noDlqConsumerProperties = new RabbitConsumerProperties();
-		noDlqConsumerProperties.setPrefix("latebinder.");
+		ConsumerProperties noDlqConsumerProperties = new ConsumerProperties();
 		Binding<MessageChannel> noDlqConsumerBinding = binder.bindConsumer("lateNoDLQ.0", "test", noDLQInputChannel, noDlqConsumerProperties);
 
 		MessageChannel outputChannel = new DirectChannel();
 		Binding<MessageChannel> pubSubProducerBinding = binder.bindProducer("latePubSub", outputChannel, noDlqProducerProperties);
 		QueueChannel pubSubInputChannel = new QueueChannel();
-		noDlqConsumerProperties.setDurableSubscription(false);
+		rabbitBinderProperties.setDurableSubscription(false);
 		Binding<MessageChannel> nonDurableConsumerBinding = binder.bindConsumer("latePubSub", "lategroup", pubSubInputChannel, noDlqConsumerProperties);
 		QueueChannel durablePubSubInputChannel = new QueueChannel();
-		noDlqConsumerProperties.setDurableSubscription(true);
+		rabbitBinderProperties.setDurableSubscription(true);
 		Binding<MessageChannel> durableConsumerBinding = binder.bindConsumer("latePubSub", "lateDurableGroup", durablePubSubInputChannel, noDlqConsumerProperties);
 
 		proxy.start();
@@ -800,12 +831,12 @@ public class RabbitBinderTests extends PartitionCapableBinderTests<RabbitTestBin
 			public Object receive(boolean expectNull) throws Exception {
 				if (expectNull) {
 					Thread.sleep(50);
-					return template.receiveAndConvert(new RabbitConsumerProperties().getPrefix() + queue);
+					return template.receiveAndConvert(((RabbitTestBinder) testBinder).getBinderProperties().getPrefix() + queue);
 				}
 				Object bar = null;
 				int n = 0;
 				while (n++ < 100 && bar == null) {
-					bar = template.receiveAndConvert(new RabbitConsumerProperties().getPrefix() + queue);
+					bar = template.receiveAndConvert(((RabbitTestBinder) testBinder).getBinderProperties().getPrefix() + queue);
 					Thread.sleep(100);
 				}
 				assertTrue("Message did not arrive in RabbitMQ", n < 100);

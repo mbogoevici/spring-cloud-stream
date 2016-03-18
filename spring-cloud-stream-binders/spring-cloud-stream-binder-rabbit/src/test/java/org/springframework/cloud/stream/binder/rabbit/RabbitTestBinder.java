@@ -23,6 +23,9 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.cloud.stream.binder.AbstractTestBinder;
 import org.springframework.cloud.stream.binder.Binding;
+import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.rabbit.config.RabbitBinderProperties;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.integration.codec.kryo.PojoCodec;
 import org.springframework.integration.context.IntegrationContextUtils;
@@ -37,7 +40,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  * @author David Turanski
  * @author Mark Fisher
  */
-public class RabbitTestBinder extends AbstractTestBinder<RabbitMessageChannelBinder, RabbitConsumerProperties, RabbitProducerProperties> {
+public class RabbitTestBinder extends AbstractTestBinder<RabbitMessageChannelBinder> {
 
 	private final RabbitAdmin rabbitAdmin;
 
@@ -47,36 +50,42 @@ public class RabbitTestBinder extends AbstractTestBinder<RabbitMessageChannelBin
 
 	private final Set<String> exchanges = new HashSet<String>();
 
-	public RabbitTestBinder(ConnectionFactory connectionFactory) {
-		this(connectionFactory, new RabbitMessageChannelBinder(connectionFactory));
-	}
+	private final RabbitBinderProperties binderProperties;
 
-	public RabbitTestBinder(ConnectionFactory connectionFactory, RabbitMessageChannelBinder binder) {
+	public RabbitTestBinder(ConnectionFactory connectionFactory, RabbitBinderProperties binderProperties) {
 		GenericApplicationContext context = new GenericApplicationContext();
 		ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
 		scheduler.setPoolSize(1);
 		scheduler.afterPropertiesSet();
 		context.getBeanFactory().registerSingleton(IntegrationContextUtils.TASK_SCHEDULER_BEAN_NAME, scheduler);
 		context.refresh();
+		RabbitMessageChannelBinder binder = new RabbitMessageChannelBinder(connectionFactory, binderProperties);
 		binder.setApplicationContext(context);
 		binder.setCodec(new PojoCodec());
 		this.setBinder(binder);
 		this.rabbitAdmin = new RabbitAdmin(connectionFactory);
+		this.binderProperties = binderProperties;
+	}
+
+	public RabbitBinderProperties getBinderProperties() {
+		return binderProperties;
 	}
 
 	@Override
-	public Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel moduleInputChannel, RabbitConsumerProperties properties) {
+	public Binding<MessageChannel> bindConsumer(String name, String group, MessageChannel moduleInputChannel,
+			ConsumerProperties properties) {
 		if (group != null) {
-			this.queues.add(properties.getPrefix() + name + ("." + group));
+			this.queues.add(binderProperties.getPrefix() + name + ("." + group));
 		}
-		this.exchanges.add(properties.getPrefix() + name);
+		this.exchanges.add(binderProperties.getPrefix() + name);
 		return super.bindConsumer(name, group, moduleInputChannel, properties);
 	}
 
 	@Override
-	public Binding<MessageChannel> bindProducer(String name, MessageChannel moduleOutputChannel, RabbitProducerProperties properties) {
-		this.queues.add(properties.getPrefix() + name + ".default");
-		this.exchanges.add(properties.getPrefix() + name);
+	public Binding<MessageChannel> bindProducer(String name, MessageChannel moduleOutputChannel,
+			ProducerProperties properties) {
+		this.queues.add(binderProperties.getPrefix() + name + ".default");
+		this.exchanges.add(binderProperties.getPrefix() + name);
 		return super.bindProducer(name, moduleOutputChannel, properties);
 	}
 

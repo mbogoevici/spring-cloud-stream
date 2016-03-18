@@ -20,18 +20,17 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import kafka.cluster.Broker;
+import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils$;
 import org.I0Itec.zkclient.ZkClient;
+import scala.collection.JavaConversions;
+import scala.collection.Seq;
 
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.integration.kafka.core.BrokerAddress;
 import org.springframework.integration.kafka.core.Partition;
-
-import kafka.cluster.Broker;
-import kafka.utils.ZKStringSerializer$;
-import kafka.utils.ZkUtils$;
-import scala.collection.JavaConversions;
-import scala.collection.Seq;
 
 /**
  * Health indicator for Kafka.
@@ -50,8 +49,9 @@ public class KafkaBinderHealthIndicator implements HealthIndicator {
 	public Health health() {
 		ZkClient zkClient = null;
 		try {
-			zkClient = new ZkClient(binder.getZkAddress(), binder.getZkSessionTimeout(),
-					binder.getZkConnectionTimeout(), ZKStringSerializer$.MODULE$);
+			zkClient = new ZkClient(binder.getKafkaBinderProperties().getZkConnectionString(),
+					binder.getKafkaBinderProperties().getZkSessionTimeout(),
+					binder.getKafkaBinderProperties().getZkConnectionTimeout(), ZKStringSerializer$.MODULE$);
 			Set<String> brokersInClusterSet = new HashSet<>();
 			Seq<Broker> allBrokersInCluster = ZkUtils$.MODULE$.getAllBrokersInCluster(zkClient);
 			Collection<Broker> brokersInCluster = JavaConversions.asJavaCollection(allBrokersInCluster);

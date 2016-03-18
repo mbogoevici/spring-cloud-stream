@@ -18,7 +18,11 @@ package org.springframework.cloud.stream.binder.kafka;
 
 import java.util.List;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
+
 import org.springframework.cloud.stream.binder.AbstractTestBinder;
+import org.springframework.cloud.stream.binder.kafka.config.KafkaBinderProperties;
 import org.springframework.cloud.stream.test.junit.kafka.KafkaTestSupport;
 import org.springframework.cloud.stream.test.junit.kafka.TestKafkaCluster;
 import org.springframework.context.support.GenericApplicationContext;
@@ -30,9 +34,6 @@ import org.springframework.integration.kafka.support.ProducerListener;
 import org.springframework.integration.kafka.support.ZookeeperConnect;
 import org.springframework.integration.tuple.TupleKryoRegistrar;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Registration;
-
 
 /**
  * Test support class for {@link KafkaMessageChannelBinder}.
@@ -43,16 +44,16 @@ import com.esotericsoftware.kryo.Registration;
  * @author Gary Russell
  * @author Soby Chacko
  */
-public class KafkaTestBinder extends AbstractTestBinder<KafkaMessageChannelBinder, KafkaConsumerProperties, KafkaProducerProperties> {
+public class KafkaTestBinder extends AbstractTestBinder<KafkaMessageChannelBinder> {
 
-	public KafkaTestBinder(KafkaTestSupport kafkaTestSupport) {
+	public KafkaTestBinder(KafkaTestSupport kafkaTestSupport, KafkaBinderProperties kafkaBinderProperties) {
 
 		try {
 			ZookeeperConnect zookeeperConnect = new ZookeeperConnect();
 			zookeeperConnect.setZkConnect(kafkaTestSupport.getZkConnectString());
-			KafkaMessageChannelBinder binder = new KafkaMessageChannelBinder(zookeeperConnect,
-					kafkaTestSupport.getBrokerAddress(),
-					kafkaTestSupport.getZkConnectString());
+			kafkaBinderProperties.setBrokers(new String[] {kafkaTestSupport.getBrokerAddress()});
+			kafkaBinderProperties.setZkNodes(new String[] {kafkaTestSupport.getZkConnectString()});
+			KafkaMessageChannelBinder binder = new KafkaMessageChannelBinder(zookeeperConnect, kafkaBinderProperties);
 			binder.setCodec(getCodec());
 			ProducerListener producerListener = new LoggingProducerListener();
 			binder.setProducerListener(producerListener);

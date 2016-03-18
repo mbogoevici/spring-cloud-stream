@@ -58,7 +58,7 @@ import org.springframework.util.StringUtils;
  * @author Mark Fisher
  * @author Marius Bogoevici
  */
-public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends ProducerProperties> implements ApplicationContextAware, InitializingBean, Binder<T, C, P> {
+public abstract class AbstractBinder<T> implements ApplicationContextAware, InitializingBean, Binder<T> {
 
 	protected static final String PARTITION_HEADER = "partition";
 
@@ -148,7 +148,7 @@ public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends 
 	}
 
 	@Override
-	public final Binding<T> bindConsumer(String name, String group, T target, C properties) {
+	public final Binding<T> bindConsumer(String name, String group, T target, ConsumerProperties properties) {
 		if (StringUtils.isEmpty(group)) {
 			Assert.isTrue(!properties.isPartitioned(),
 					"A consumer group is required for a partitioned subscription");
@@ -156,14 +156,15 @@ public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends 
 		return doBindConsumer(name, group, target, properties);
 	}
 
-	protected abstract Binding<T> doBindConsumer(String name, String group, T inputTarget, C properties);
+	protected abstract Binding<T> doBindConsumer(String name, String group, T inputTarget,
+			ConsumerProperties properties);
 
 	@Override
-	public final Binding<T> bindProducer(String name, T outboundBindTarget, P properties) {
+	public final Binding<T> bindProducer(String name, T outboundBindTarget, ProducerProperties properties) {
 		return doBindProducer(name, outboundBindTarget, properties);
 	}
 
-	protected abstract Binding<T> doBindProducer(String name, T outboundBindTarget, P properties);
+	protected abstract Binding<T> doBindProducer(String name, T outboundBindTarget, ProducerProperties properties);
 
 	/**
 	 * Construct a name comprised of the name and group.

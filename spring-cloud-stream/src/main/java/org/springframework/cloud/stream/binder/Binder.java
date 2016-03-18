@@ -29,7 +29,7 @@ package org.springframework.cloud.stream.binder;
  * @author Marius Bogoevici
  * @since 1.0
  */
-public interface Binder<T, C extends ConsumerProperties, P extends ProducerProperties> {
+public interface Binder<T> {
 
 	/**
 	 * Bind the target component as a message consumer to the logical entity identified by the name.
@@ -40,7 +40,7 @@ public interface Binder<T, C extends ConsumerProperties, P extends ProducerPrope
 	 * @param inboundBindTarget the app interface to be bound as a consumer
 	 * @param consumerProperties the consumer properties
 	 */
-	Binding<T> bindConsumer(String name, String group, T inboundBindTarget, C consumerProperties);
+	Binding<T> bindConsumer(String name, String group, T inboundBindTarget, ConsumerProperties consumerProperties);
 
 	/**
 	 * Bind the target component as a message producer to the logical entity identified by the name.
@@ -48,6 +48,6 @@ public interface Binder<T, C extends ConsumerProperties, P extends ProducerPrope
 	 * @param outboundBindTarget the app interface to be bound as a producer
 	 * @param producerProperties the producer properties
 	 */
-	Binding<T> bindProducer(String name, T outboundBindTarget, P producerProperties);
+	Binding<T> bindProducer(String name, T outboundBindTarget, ProducerProperties producerProperties);
 
 }

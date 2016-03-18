@@ -107,12 +107,9 @@ public class BinderAwareChannelResolver extends BeanFactoryMessageChannelDestina
 					this.beanFactory.registerSingleton(beanName, channel);
 					channel = (MessageChannel) this.beanFactory.initializeBean(channel, beanName);
 					@SuppressWarnings("unchecked")
-					Binder<MessageChannel, ?, ProducerProperties> binder =
-							(Binder<MessageChannel, ?, ProducerProperties>) binderFactory.getBinder(binderName);
-					Class<? extends ProducerProperties> producerPropertiesClass =
-							ChannelBindingService.resolveProducerPropertiesType(binder);
+					Binder<MessageChannel> binder = binderFactory.getBinder(binderName);
 					ProducerProperties producerProperties =
-							this.channelBindingServiceProperties.getProducerProperties(channelName, producerPropertiesClass);
+							this.channelBindingServiceProperties.getProducerProperties(channelName);
 					String destinationName = this.channelBindingServiceProperties.getBindingDestination(channelName);
 					this.dynamicDestinationsBindable.addOutputBinding(beanName,
 							binder.bindProducer(destinationName, channel, producerProperties));

@@ -19,6 +19,9 @@ package org.springframework.cloud.stream.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ProducerProperties;
+
 /**
  * Contains the properties of a binding.
  * @author Marius Bogoevici
@@ -48,6 +51,10 @@ public class BindingProperties {
 	private String contentType;
 
 	private String binder;
+
+	private ConsumerProperties consumer = new ConsumerProperties();
+
+	private ProducerProperties producer = new ProducerProperties();
 
 	public String getDestination() {
 		return this.destination;
@@ -79,6 +86,22 @@ public class BindingProperties {
 
 	public void setBinder(String binder) {
 		this.binder = binder;
+	}
+
+	public ConsumerProperties getConsumer() {
+		return consumer;
+	}
+
+	public void setConsumer(ConsumerProperties consumer) {
+		this.consumer = consumer;
+	}
+
+	public ProducerProperties getProducer() {
+		return producer;
+	}
+
+	public void setProducer(ProducerProperties producer) {
+		this.producer = producer;
 	}
 
 	public String toString() {

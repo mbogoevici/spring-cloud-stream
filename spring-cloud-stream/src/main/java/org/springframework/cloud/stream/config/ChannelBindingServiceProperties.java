@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -29,12 +28,8 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.bind.PropertySourcesPropertyValues;
-import org.springframework.boot.bind.RelaxedDataBinder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
@@ -77,10 +72,6 @@ public class ChannelBindingServiceProperties implements ApplicationContextAware,
 	private Map<String, BindingProperties> bindings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 	private Map<String, BinderProperties> binders = new HashMap<>();
-
-	private Properties consumerDefaults = new Properties();
-
-	private Properties producerDefaults = new Properties();
 
 	private String defaultBinder;
 
@@ -138,22 +129,6 @@ public class ChannelBindingServiceProperties implements ApplicationContextAware,
 		this.dynamicDestinations = dynamicDestinations;
 	}
 
-	public Properties getConsumerDefaults() {
-		return consumerDefaults;
-	}
-
-	public void setConsumerDefaults(Properties consumerDefaults) {
-		this.consumerDefaults = consumerDefaults;
-	}
-
-	public Properties getProducerDefaults() {
-		return producerDefaults;
-	}
-
-	public void setProducerDefaults(Properties producerDefaults) {
-		this.producerDefaults = producerDefaults;
-	}
-
 	public boolean isIgnoreUnknownProperties() {
 		return ignoreUnknownProperties;
 	}
@@ -178,65 +153,19 @@ public class ChannelBindingServiceProperties implements ApplicationContextAware,
 		return getBindingProperties(channelName).getBinder();
 	}
 
-	/**
-	 * Return configuration properties as Map.
-	 * @return map of channel binding configuration properties.
-	 */
-	public Map<String, Object> asMapProperties() {
-		Map<String, Object> properties = new HashMap<>();
-		properties.put("instanceIndex", String.valueOf(getInstanceIndex()));
-		properties.put("instanceCount", String.valueOf(getInstanceCount()));
-		properties.put("defaultBinder", getDefaultBinder());
-		properties.put("dynamicDestinations", getDynamicDestinations());
-		for (Map.Entry<String, BindingProperties> entry : bindings.entrySet()) {
-			properties.put(entry.getKey(), entry.getValue().toString());
-		}
-		for (Map.Entry<String, BinderProperties> entry : binders.entrySet()) {
-			properties.put(entry.getKey(), entry.getValue());
-		}
-		return properties;
-	}
-
-	public <T extends ConsumerProperties> T getConsumerProperties(String inputChannelName, Class<T> beanClass) {
+	public ConsumerProperties getConsumerProperties(String inputChannelName) {
 		Assert.notNull(inputChannelName, "The input channel name cannot be null");
-		Assert.notNull(beanClass, "The bean class cannot be null");
-		T consumerProperties = populateProperties(inputChannelName, beanClass, consumerDefaults);
+		ConsumerProperties consumerProperties = getBindingProperties(inputChannelName).getConsumer();
 		consumerProperties.setInstanceCount(this.instanceCount);
 		consumerProperties.setInstanceIndex(this.instanceIndex);
 		return consumerProperties;
 	}
 
 
-	public <T extends ProducerProperties> T getProducerProperties(String outputChannelName, Class<T> beanClass) {
+	public ProducerProperties getProducerProperties(String outputChannelName) {
 		Assert.notNull(outputChannelName, "The output channel name cannot be null");
-		Assert.notNull(beanClass, "The bean class cannot be null");
-		T producerProperties = populateProperties(outputChannelName, beanClass, producerDefaults);
+		ProducerProperties producerProperties = getBindingProperties(outputChannelName).getProducer();
 		return producerProperties;
-	}
-
-
-	private <C> C populateProperties(String channelName, Class<C> propertiesClass, Properties defaults) {
-		C beanInstance;
-		try {
-			beanInstance = propertiesClass.newInstance();
-		}
-		catch (InstantiationException | IllegalAccessException e) {
-			throw new BeanInitializationException(e.getMessage());
-		}
-		// bind defaults first
-		RelaxedDataBinder dataBinder = new RelaxedDataBinder(beanInstance);
-		dataBinder.setIgnoreUnknownFields(ignoreUnknownProperties);
-		dataBinder.setDisallowedFields(bindingPropertyFields);
-		dataBinder.bind(new MutablePropertyValues(defaults));
-		// bind configured properties next, if available
-		if (applicationContext != null && applicationContext.getEnvironment() != null) {
-			dataBinder = new RelaxedDataBinder(beanInstance, "spring.cloud.stream.bindings." + channelName);
-			dataBinder.setConversionService(conversionService);
-			dataBinder.setIgnoreUnknownFields(ignoreUnknownProperties);
-			dataBinder.setDisallowedFields(bindingPropertyFields);
-			dataBinder.bind(new PropertySourcesPropertyValues(applicationContext.getEnvironment().getPropertySources()));
-		}
-		return beanInstance;
 	}
 
 	public BindingProperties getBindingProperties(String channelName) {

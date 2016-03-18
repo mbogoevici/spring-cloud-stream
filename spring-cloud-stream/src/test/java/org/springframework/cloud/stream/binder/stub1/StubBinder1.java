@@ -25,7 +25,7 @@ import org.springframework.cloud.stream.binder.ProducerProperties;
  * @author Marius Bogoevici
  * @author Mark Fisher
  */
-public class StubBinder1 implements Binder<Object, ConsumerProperties, ProducerProperties> {
+public class StubBinder1 implements Binder<Object> {
 
 	private String name;
 

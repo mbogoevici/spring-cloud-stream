@@ -51,14 +51,14 @@ import org.springframework.messaging.support.GenericMessage;
  * @author Mark Fisher
  * @author Marius Bogoevici
  */
-abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<? extends AbstractBinder<MessageChannel, CP, PP>, CP, PP>, CP extends ConsumerProperties, PP extends ProducerProperties> extends BrokerBinderTests<B,CP,PP> {
+abstract public class PartitionCapableBinderTests extends BrokerBinderTests {
 
 	protected static final SpelExpressionParser spelExpressionParser = new SpelExpressionParser();
 
 	@Test
 	@SuppressWarnings("unchecked")
 	public void testAnonymousGroup() throws Exception {
-		B binder = getBinder();
+		Binder<MessageChannel> binder = getBinder();
 		DirectChannel output = new DirectChannel();
 		Binding<MessageChannel> producerBinding = binder.bindProducer("defaultGroup.0", output, createProducerProperties());
 
@@ -106,10 +106,10 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 
 	@Test
 	public void testOneRequiredGroup() throws Exception {
-		B binder = getBinder();
+		Binder<MessageChannel> binder = getBinder();
 		DirectChannel output = new DirectChannel();
 
-		PP producerProperties = createProducerProperties();
+		ProducerProperties producerProperties = createProducerProperties();
 
 		String testDestination = "testDestination" + UUID.randomUUID().toString().replace("-", "");
 
@@ -132,12 +132,12 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 
 	@Test
 	public void testTwoRequiredGroups() throws Exception {
-		B binder = getBinder();
+		Binder<MessageChannel> binder = getBinder();
 		DirectChannel output = new DirectChannel();
 
 		String testDestination = "testDestination" + UUID.randomUUID().toString().replace("-", "");
 
-		PP producerProperties = createProducerProperties();
+		ProducerProperties producerProperties = createProducerProperties();
 		producerProperties.setRequiredGroups("test1","test2");
 		Binding<MessageChannel> producerBinding = binder.bindProducer(testDestination, output, producerProperties);
 
@@ -163,9 +163,9 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 
 	@Test
 	public void testPartitionedModuleSpEL() throws Exception {
-		B binder = getBinder();
+		Binder<MessageChannel> binder = getBinder();
 
-		CP consumerProperties = createConsumerProperties();
+		ConsumerProperties consumerProperties = createConsumerProperties();
 		consumerProperties.setConcurrency(2);
 		consumerProperties.setInstanceIndex(0);
 		consumerProperties.setInstanceCount(3);
@@ -182,7 +182,7 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 		input2.setBeanName("test.input2S");
 		Binding<MessageChannel> input2Binding = binder.bindConsumer("part.0", "test", input2, consumerProperties);
 
-		PP producerProperties = createProducerProperties();
+		ProducerProperties producerProperties = createProducerProperties();
 		producerProperties.setPartitionKeyExpression(spelExpressionParser.parseExpression("payload"));
 		producerProperties.setPartitionSelectorExpression(spelExpressionParser.parseExpression("hashCode()"));
 		producerProperties.setPartitionCount(3);
@@ -257,9 +257,9 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 
 	@Test
 	public void testPartitionedModuleJava() throws Exception {
-		B binder = getBinder();
+		Binder<MessageChannel> binder = getBinder();
 
-		CP consumerProperties = createConsumerProperties();
+		ConsumerProperties consumerProperties = createConsumerProperties();
 		consumerProperties.setConcurrency(2);
 		consumerProperties.setInstanceCount(3);
 		consumerProperties.setInstanceIndex(0);
@@ -276,7 +276,7 @@ abstract public class PartitionCapableBinderTests<B extends AbstractTestBinder<?
 		input2.setBeanName("test.input2J");
 		Binding<MessageChannel> input2Binding = binder.bindConsumer("partJ.0", "test", input2, consumerProperties);
 
-		PP producerProperties = createProducerProperties();
+		ProducerProperties producerProperties = createProducerProperties();
 		producerProperties.setPartitionKeyExtractorClass(PartitionTestSupport.class);
 		producerProperties.setPartitionSelectorClass(PartitionTestSupport.class);
 		producerProperties.setPartitionCount(3);

@@ -46,7 +46,7 @@ import org.springframework.util.Assert;
  * @author Mark Fisher
  * @see MessageQueueMatcher
  */
-public class TestSupportBinder implements Binder<MessageChannel, ConsumerProperties, ProducerProperties> {
+public class TestSupportBinder implements Binder<MessageChannel> {
 
 	private final MessageCollectorImpl messageCollector = new MessageCollectorImpl();
 

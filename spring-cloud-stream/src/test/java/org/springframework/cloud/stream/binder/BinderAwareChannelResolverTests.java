@@ -74,7 +74,7 @@ public class BinderAwareChannelResolverTests {
 
 	private volatile BinderAwareChannelResolver resolver;
 
-	private volatile Binder<MessageChannel, ConsumerProperties, ProducerProperties> binder;
+	private volatile Binder<MessageChannel> binder;
 
 	private volatile BindableChannelFactory bindableChannelFactory;
 
@@ -86,7 +86,7 @@ public class BinderAwareChannelResolverTests {
 		BinderFactory binderFactory = new BinderFactory<MessageChannel>() {
 
 			@Override
-			public Binder<MessageChannel, ConsumerProperties, ProducerProperties> getBinder(String configurationName) {
+			public Binder<MessageChannel> getBinder(String configurationName) {
 				return binder;
 			}
 		};
@@ -192,7 +192,7 @@ public class BinderAwareChannelResolverTests {
 	/**
 	 * A simple test binder that creates queues for the destinations. Ignores groups.
 	 */
-	private class TestBinder implements Binder<MessageChannel, ConsumerProperties, ProducerProperties> {
+	private class TestBinder implements Binder<MessageChannel> {
 
 		private final Map<String, DirectChannel> destinations = new ConcurrentHashMap<>();
 

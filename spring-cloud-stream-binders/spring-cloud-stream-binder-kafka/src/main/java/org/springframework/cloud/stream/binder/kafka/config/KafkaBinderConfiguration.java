@@ -44,7 +44,7 @@ import org.springframework.util.ObjectUtils;
 @Configuration
 @ConditionalOnMissingBean(Binder.class)
 @Import({KryoCodecAutoConfiguration.class, PropertyPlaceholderAutoConfiguration.class})
-@EnableConfigurationProperties({KafkaBinderConfigurationProperties.class})
+@EnableConfigurationProperties({KafkaBinderProperties.class})
 @PropertySource("classpath:/META-INF/spring-cloud-stream/kafka-binder.properties")
 public class KafkaBinderConfiguration {
 
@@ -52,7 +52,7 @@ public class KafkaBinderConfiguration {
 	private Codec codec;
 
 	@Autowired
-	private KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties;
+	private KafkaBinderProperties kafkaBinderProperties;
 
 	@Autowired
 	private ProducerListener producerListener;
@@ -60,33 +60,18 @@ public class KafkaBinderConfiguration {
 	@Bean
 	ZookeeperConnect zookeeperConnect() {
 		ZookeeperConnect zookeeperConnect = new ZookeeperConnect();
-		zookeeperConnect.setZkConnect(kafkaBinderConfigurationProperties.getZkConnectionString());
+		zookeeperConnect.setZkConnect(kafkaBinderProperties.getZkConnectionString());
 		return zookeeperConnect;
 	}
 
 	@Bean
 	KafkaMessageChannelBinder kafkaMessageChannelBinder() {
-		String[] headers = kafkaBinderConfigurationProperties.getHeaders();
-		String kafkaConnectionString = kafkaBinderConfigurationProperties.getKafkaConnectionString();
-		String zkConnectionString = kafkaBinderConfigurationProperties.getZkConnectionString();
+		String[] headers = kafkaBinderProperties.getHeaders();
 		KafkaMessageChannelBinder kafkaMessageChannelBinder = ObjectUtils.isEmpty(headers) ?
-				new KafkaMessageChannelBinder(zookeeperConnect(), kafkaConnectionString, zkConnectionString)
-				: new KafkaMessageChannelBinder(zookeeperConnect(), kafkaConnectionString, zkConnectionString,
+				new KafkaMessageChannelBinder(zookeeperConnect(), kafkaBinderProperties)
+				: new KafkaMessageChannelBinder(zookeeperConnect(), kafkaBinderProperties,
 				headers);
 		kafkaMessageChannelBinder.setCodec(codec);
-		kafkaMessageChannelBinder.setOffsetUpdateTimeWindow(kafkaBinderConfigurationProperties.getOffsetUpdateTimeWindow());
-		kafkaMessageChannelBinder.setOffsetUpdateCount(kafkaBinderConfigurationProperties.getOffsetUpdateCount());
-		kafkaMessageChannelBinder.setOffsetUpdateShutdownTimeout(kafkaBinderConfigurationProperties.getOffsetUpdateShutdownTimeout());
-
-		kafkaMessageChannelBinder.setZkSessionTimeout(kafkaBinderConfigurationProperties.getZkSessionTimeout());
-		kafkaMessageChannelBinder.setZkConnectionTimeout(kafkaBinderConfigurationProperties.getZkConnectionTimeout());
-
-		kafkaMessageChannelBinder.setFetchSize(kafkaBinderConfigurationProperties.getFetchSize());
-		kafkaMessageChannelBinder.setDefaultMinPartitionCount(kafkaBinderConfigurationProperties.getMinPartitionCount());
-		kafkaMessageChannelBinder.setQueueSize(kafkaBinderConfigurationProperties.getQueueSize());
-		kafkaMessageChannelBinder.setReplicationFactor(kafkaBinderConfigurationProperties.getReplicationFactor());
-		kafkaMessageChannelBinder.setRequiredAcks(kafkaBinderConfigurationProperties.getRequiredAcks());
-		kafkaMessageChannelBinder.setMaxWait(kafkaBinderConfigurationProperties.getMaxWait());
 
 		kafkaMessageChannelBinder.setProducerListener(producerListener);
 		return kafkaMessageChannelBinder;

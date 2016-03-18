@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,9 +44,6 @@ import org.springframework.tuple.Tuple;
 import org.springframework.tuple.TupleBuilder;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Registration;
 
 /**
  * @author Gary Russell
@@ -298,7 +297,7 @@ public class MessageChannelBinderSupportTests {
 
 	}
 
-	public class TestMessageChannelBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
+	public class TestMessageChannelBinder extends AbstractBinder<MessageChannel> {
 
 		@Override
 		protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel channel, ConsumerProperties properties) {

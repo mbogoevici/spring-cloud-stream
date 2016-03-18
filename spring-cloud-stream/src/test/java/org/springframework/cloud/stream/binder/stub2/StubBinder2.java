@@ -25,7 +25,7 @@ import org.springframework.cloud.stream.binder.ProducerProperties;
  * @author Marius Bogoevici
  * @author Mark Fisher
  */
-public class StubBinder2 implements Binder<Object, ConsumerProperties, ProducerProperties> {
+public class StubBinder2 implements Binder<Object> {
 
 	@SuppressWarnings("unused")
 	private final StubBinder2Dependency stubBinder2Dependency;

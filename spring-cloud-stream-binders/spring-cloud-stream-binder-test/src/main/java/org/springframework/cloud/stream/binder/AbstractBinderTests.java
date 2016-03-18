@@ -46,7 +46,7 @@ import org.springframework.util.MimeTypeUtils;
  * @author David Turanski
  * @author Mark Fisher
  */
-public abstract class AbstractBinderTests<B extends AbstractTestBinder<? extends AbstractBinder<MessageChannel, CP, PP>, CP, PP>, CP extends ConsumerProperties, PP extends ProducerProperties> {
+public abstract class AbstractBinderTests<B extends AbstractTestBinder<? extends AbstractBinder<MessageChannel>>> {
 
 	protected B testBinder;
 
@@ -174,15 +174,16 @@ public abstract class AbstractBinderTests<B extends AbstractTestBinder<? extends
 
 	protected abstract B getBinder() throws Exception;
 
-	protected abstract CP createConsumerProperties();
+	protected abstract ConsumerProperties createConsumerProperties();
 
-	protected abstract PP createProducerProperties();
+	protected abstract ProducerProperties createProducerProperties();
 
 	@After
 	public void cleanup() {
 		if (testBinder != null) {
 			testBinder.cleanup();
 		}
+		testBinder = null;
 		System.clearProperty("SCS_KAFKA_TEST_EMBEDDED");
 	}
 
