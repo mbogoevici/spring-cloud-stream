@@ -73,9 +73,6 @@ public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends 
 
 	private final StringConvertingContentTypeResolver contentTypeResolver = new StringConvertingContentTypeResolver();
 
-	protected final EmbeddedHeadersMessageConverter embeddedHeadersMessageConverter = new
-			EmbeddedHeadersMessageConverter();
-
 	protected volatile EvaluationContext evaluationContext;
 
 	protected volatile PartitionSelectorStrategy partitionSelector;
@@ -138,26 +135,6 @@ public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends 
 			this.evaluationContext = ExpressionUtils.createStandardEvaluationContext(getBeanFactory());
 		}
 		onInit();
-	}
-
-	/**
-	 * Extract the message values from the the received message when the received message is embedded with
-	 * header values. Once extracted, deserialize the payload if necessary.
-	 *
-	 * @param receivedMessage the received message
-	 * @return extracted message values
-	 */
-	public MessageValues extractMessageValues(Message<?> receivedMessage) {
-		MessageValues messageValues;
-		try {
-			messageValues = embeddedHeadersMessageConverter.extractHeaders((Message<byte[]>) receivedMessage,
-					true);
-		}
-		catch (Exception e) {
-			logger.error(EmbeddedHeadersMessageConverter.decodeExceptionMessage(receivedMessage), e);
-			messageValues = new MessageValues(receivedMessage);
-		}
-		return deserializePayloadIfNecessary(messageValues);
 	}
 
 	/**
@@ -386,5 +363,4 @@ public abstract class AbstractBinder<T, C extends ConsumerProperties, P extends 
 		}
 
 	}
-
 }

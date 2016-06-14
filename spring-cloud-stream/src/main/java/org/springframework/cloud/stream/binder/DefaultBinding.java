@@ -31,13 +31,13 @@ import org.springframework.util.Assert;
  */
 public class DefaultBinding<T> implements Binding<T> {
 
-	private final String name;
+	protected final String name;
 
-	private final String group;
+	protected final String group;
 
-	private final T target;
+	protected final T target;
 
-	private final AbstractEndpoint endpoint;
+	protected final AbstractEndpoint endpoint;
 
 	public DefaultBinding(String name, String group, T target, AbstractEndpoint endpoint) {
 		Assert.notNull(target, "target must not be null");
@@ -50,17 +50,17 @@ public class DefaultBinding<T> implements Binding<T> {
 
 
 	public String getName() {
-		return name;
+		return this.name;
 	}
 
 	public String getGroup() {
-		return group;
+		return this.group;
 	}
 
 
 	@Override
 	public final void unbind() {
-		endpoint.stop();
+		this.endpoint.stop();
 		afterUnbind();
 	}
 
@@ -69,7 +69,8 @@ public class DefaultBinding<T> implements Binding<T> {
 
 	@Override
 	public String toString() {
-		return " Binding [name=" + name + ", target=" + target + ", endpoint=" + endpoint.getComponentName()
+		return " Binding [name=" + this.name + ", target=" + this.target + ", endpoint=" + this.endpoint
+				.getComponentName()
 				+ "]";
 	}
 }

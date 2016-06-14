@@ -165,10 +165,10 @@ public class ChannelBindingServiceConfiguration {
 	@Bean
 	public CompositeMessageConverterFactory compositeMessageConverterFactory() {
 		List<AbstractFromMessageConverter> messageConverters = new ArrayList<>();
-		if (!CollectionUtils.isEmpty(customMessageConverters)) {
-			messageConverters.addAll(Collections.unmodifiableCollection(customMessageConverters));
+		if (!CollectionUtils.isEmpty(this.customMessageConverters)) {
+			messageConverters.addAll(Collections.unmodifiableCollection(this.customMessageConverters));
 		}
-		return new CompositeMessageConverterFactory(messageConverters, objectMapper);
+		return new CompositeMessageConverterFactory(messageConverters, this.objectMapper);
 	}
 
 	@Bean
