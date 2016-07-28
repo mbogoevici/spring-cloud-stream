@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sun.javafx.binding.StringFormatter;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.avro.generic.GenericDatumReader;
@@ -118,16 +117,18 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter impleme
 			try {
 				Resource[] resources = this.applicationContext.getResources(this.schemaLocations);
 				if (this.logger.isInfoEnabled()) {
-					this.logger.info(StringFormatter.format("Found %d schemas on classpath", resources.length));
+					this.logger.info("Found" + resources.length + " schemas on classpath");
 				}
 				for (Resource r : resources) {
 					Schema schema = parser.parse(r.getInputStream());
-					this.logger.info(StringFormatter
-							.format("Resource %schema parsed into schema %schema.%schema", r.getFilename(),
-									schema.getNamespace(),
-									schema.getName()));
+					if (this.logger.isInfoEnabled()) {
+						this.logger.info("Resource " + r.getFilename() + " parsed into schema " + schema
+								.getNamespace() + "." + schema.getName());
+					}
 					this.schemaRegistryClient.register(toSubject(schema), schema);
-					this.logger.info("Schema " + schema.getName() + " registered with id " + schema);
+					if (this.logger.isInfoEnabled()) {
+						this.logger.info("Schema " + schema.getName() + " registered with id " + schema);
+					}
 					this.localSchemaMap.put(schema.getNamespace() + "." + schema.getName(), schema);
 				}
 			}
