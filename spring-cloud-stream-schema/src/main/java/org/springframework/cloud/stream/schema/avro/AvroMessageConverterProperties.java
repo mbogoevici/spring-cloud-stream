@@ -17,6 +17,8 @@
 package org.springframework.cloud.stream.schema.avro;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
 
 /**
  * @author Vinicius Carvalho
@@ -26,14 +28,26 @@ public class AvroMessageConverterProperties {
 
 	private boolean dynamicSchemaGenerationEnabled;
 
-	private String readerSchema;
+	private Resource readerSchema;
 
-	public String getReaderSchema() {
+	private String schemaLocations;
+
+	public Resource getReaderSchema() {
 		return this.readerSchema;
 	}
 
-	public void setReaderSchema(String readerSchema) {
+	public void setReaderSchema(Resource readerSchema) {
+		Assert.notNull(readerSchema, "cannot be null");
 		this.readerSchema = readerSchema;
+	}
+
+	public String getSchemaLocations() {
+		return this.schemaLocations;
+	}
+
+	public void setSchemaLocations(String schemaLocations) {
+		Assert.notNull(schemaLocations, "cannot be null");
+		this.schemaLocations = schemaLocations;
 	}
 
 	public boolean isDynamicSchemaGenerationEnabled() {

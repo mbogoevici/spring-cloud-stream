@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sun.javafx.binding.StringFormatter;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.avro.generic.GenericDatumReader;
@@ -43,22 +44,31 @@ import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
 
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanInitializationException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.io.Resource;
 import org.springframework.integration.support.MutableMessageHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.converter.AbstractMessageConverter;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
+import org.springframework.util.StringUtils;
 
 /**
  * @author Marius Bogoevici
  * @author Vinicius Carvalho
  */
-public class AvroSchemaMessageConverter extends AbstractMessageConverter {
+public class AvroSchemaMessageConverter extends AbstractMessageConverter implements ApplicationContextAware,
+		InitializingBean {
 
 	private static Pattern SCHEMA_WITH_VERSION = Pattern.compile(
 			"application/vnd\\.([\\p{Alnum}\\$\\.]+)\\.v(\\p{Digit}+)\\+avro");
 
+	private ApplicationContext applicationContext;
 
 	private boolean dynamicSchemaGenerationEnabled;
 
@@ -66,8 +76,9 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 
 	private Schema readerSchema;
 
-	private SchemaRegistryClient schemaRegistryClient;
+	private String schemaLocations;
 
+	private SchemaRegistryClient schemaRegistryClient;
 
 	public AvroSchemaMessageConverter(SchemaRegistryClient schemaRegistryClient) {
 		super(Arrays.asList(new MimeType("application", "avro"), new MimeType("application", "*+avro")));
@@ -83,6 +94,47 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 		return this.dynamicSchemaGenerationEnabled;
 	}
 
+	public void setSchemaLocations(String schemaLocations) {
+		Assert.hasText(schemaLocations, "cannot be empty");
+		this.schemaLocations = schemaLocations;
+	}
+
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		if (StringUtils.hasText(this.schemaLocations)) {
+			this.logger.info("Scanning avro schema resources on classpath");
+			Schema.Parser parser = new Schema.Parser();
+			try {
+				Resource[] resources = this.applicationContext.getResources(this.schemaLocations);
+				if (this.logger.isInfoEnabled()) {
+					this.logger.info(StringFormatter.format("Found %d schemas on classpath", resources.length));
+				}
+				for (Resource r : resources) {
+					Schema schema = parser.parse(r.getInputStream());
+					this.logger.info(StringFormatter
+							.format("Resource %schema parsed into schema %schema.%schema", r.getFilename(),
+									schema.getNamespace(),
+									schema.getName()));
+					this.schemaRegistryClient.register(toSubject(schema), schema);
+					this.logger.info("Schema " + schema.getName() + " registered with id " + schema);
+					this.localSchemaMap.put(schema.getNamespace() + "." + schema.getName(), schema);
+				}
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected String toSubject(Schema schema) {
+		return schema.getFullName().toLowerCase();
+	}
+
 	@Override
 	protected boolean supports(Class<?> clazz) {
 		// we support all types
@@ -91,8 +143,7 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 
 	@Override
 	protected boolean supportsMimeType(MessageHeaders headers) {
-		boolean superMimeTypeCheck = super.supportsMimeType(headers);
-		if (superMimeTypeCheck) {
+		if (super.supportsMimeType(headers)) {
 			return true;
 		}
 		MimeType mimeType = getContentTypeResolver().resolve(headers);
@@ -114,7 +165,7 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 			if (schemaReference == null) {
 				schema = extractSchemaForWriting(payload);
 				SchemaRegistrationResponse schemaRegistrationResponse = this.schemaRegistryClient.register(
-						schema.getFullName().toLowerCase(), schema);
+						toSubject(schema), schema);
 				schemaReference = schemaRegistrationResponse.getSchemaReference();
 			}
 			else {
@@ -221,6 +272,16 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 		return this.readerSchema != null ? this.readerSchema : writerSchema;
 	}
 
+	public void setReaderSchema(Resource readerSchema) {
+		Assert.notNull(readerSchema, "cannot be null");
+		try {
+			this.readerSchema = new Schema.Parser().parse(readerSchema.getInputStream());
+		}
+		catch (IOException e) {
+			throw new BeanInitializationException("Cannot initialize reader schema", e);
+		}
+	}
+
 	private Schema extractSchemaForWriting(Object payload) {
 		Schema schema = null;
 		if (this.logger.isDebugEnabled()) {
@@ -242,7 +303,7 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 				}
 				else {
 					schema = ReflectData.get().getSchema(payload.getClass());
-					this.schemaRegistryClient.register(schema.getFullName().toLowerCase(), schema);
+					this.schemaRegistryClient.register(toSubject(schema), schema);
 				}
 				this.localSchemaMap.put(payload.getClass().getName(), schema);
 			}

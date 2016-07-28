@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.stream.binder.StringConvertingContentTypeResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * @author Marius Bogoevici
@@ -41,6 +42,12 @@ public class AvroMessageConverterAutoConfiguration {
 		avroSchemaMessageConverter.setDynamicSchemaGenerationEnabled(
 				this.avroMessageConverterProperties.isDynamicSchemaGenerationEnabled());
 		avroSchemaMessageConverter.setContentTypeResolver(new StringConvertingContentTypeResolver());
+		if (this.avroMessageConverterProperties.getReaderSchema() != null) {
+			avroSchemaMessageConverter.setReaderSchema(this.avroMessageConverterProperties.getReaderSchema());
+		}
+		if (StringUtils.hasText(this.avroMessageConverterProperties.getSchemaLocations())) {
+			avroSchemaMessageConverter.setSchemaLocations(this.avroMessageConverterProperties.getSchemaLocations());
+		}
 		return avroSchemaMessageConverter;
 	}
 }
