@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema.avro;
+package org.springframework.cloud.stream.schema;
+
+import org.apache.avro.Schema;
 
 /**
+ * @author Vinicius Carvalho
  * @author Marius Bogoevici
  */
-public class SchemaRegistrationResponse {
+public interface SchemaRegistryClient {
 
-	private long id;
+	/**
+	 * Registers a schema with the remote repository returning the unique identifier associated with this schema.
+	 * version
+	 * @param subject the full name of the schena
+	 * @param schema
+	 * @return a {@link SchemaRegistrationResponse} representing the result of the operation
+	 */
+	SchemaRegistrationResponse register(String subject, Schema schema);
 
-	private SchemaReference schemaReference;
+	/**
+	 * Retrieves a schema by its identifier.
+	 * @param id
+	 * @return
+	 */
+	Schema fetch(SchemaReference id);
 
-	public long getId() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	public SchemaReference getSchemaReference() {
-		return schemaReference;
-	}
-
-	public void setSchemaReference(SchemaReference schemaReference) {
-		this.schemaReference = schemaReference;
-	}
 }

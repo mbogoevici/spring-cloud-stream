@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema.avro;
+package org.springframework.cloud.stream.schema;
 
 /**
  * @author Vinicius Carvalho

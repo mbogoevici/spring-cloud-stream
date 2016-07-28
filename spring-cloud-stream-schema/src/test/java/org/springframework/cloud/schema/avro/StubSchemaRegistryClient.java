@@ -22,11 +22,11 @@ import java.util.TreeMap;
 
 import org.apache.avro.Schema;
 
+import org.springframework.cloud.stream.schema.SchemaNotFoundException;
+import org.springframework.cloud.stream.schema.SchemaReference;
+import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
+import org.springframework.cloud.stream.schema.SchemaRegistryClient;
 import org.springframework.cloud.stream.schema.avro.AvroSchemaMessageConverter;
-import org.springframework.cloud.stream.schema.avro.SchemaNotFoundException;
-import org.springframework.cloud.stream.schema.avro.SchemaReference;
-import org.springframework.cloud.stream.schema.avro.SchemaRegistrationResponse;
-import org.springframework.cloud.stream.schema.avro.SchemaRegistryClient;
 
 /**
  * @author Marius Bogoevici
