@@ -16,18 +16,24 @@
 
 package org.springframework.cloud.schema.avro;
 
+import org.apache.avro.reflect.AvroDefault;
+import org.apache.avro.reflect.Nullable;
+
 /**
  * @author Marius Bogoevici
  */
 public class User2 {
 
+	@Nullable
 	private String name;
 
 	private int favoriteNumber;
 
+	@Nullable
 	private String favoriteColor;
 
-	private String favoritePlace;
+	@AvroDefault("\"NYC\"")
+	private String favoritePlace = "Boston";
 
 	public String getName() {
 		return this.name;

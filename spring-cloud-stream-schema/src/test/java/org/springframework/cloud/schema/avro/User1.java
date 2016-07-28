@@ -16,15 +16,19 @@
 
 package org.springframework.cloud.schema.avro;
 
+import org.apache.avro.reflect.Nullable;
+
 /**
  * @author Marius Bogoevici
  */
 public class User1 {
 
+	@Nullable
 	private String name;
-
+	
 	private int favoriteNumber;
 
+	@Nullable
 	private String favoriteColor;
 
 	public String getName() {
