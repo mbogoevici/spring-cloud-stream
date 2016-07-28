@@ -26,7 +26,7 @@ import org.springframework.cloud.stream.schema.SchemaNotFoundException;
 import org.springframework.cloud.stream.schema.SchemaReference;
 import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
 import org.springframework.cloud.stream.schema.SchemaRegistryClient;
-import org.springframework.cloud.stream.schema.avro.AvroSchemaMessageConverter;
+import org.springframework.cloud.stream.schema.avro.AvroSchemaRegistryClientMessageConverter;
 
 /**
  * @author Marius Bogoevici
@@ -48,7 +48,7 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 				schemaRegistrationResponse.setId(0);
 				schemaRegistrationResponse.setSchemaReference(
 						new SchemaReference(subject, integerSchemaEntry.getKey(),
-								AvroSchemaMessageConverter.AVRO_FORMAT));
+								AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT));
 				return schemaRegistrationResponse;
 			}
 		}
@@ -57,13 +57,13 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 		SchemaRegistrationResponse schemaRegistrationResponse = new SchemaRegistrationResponse();
 		schemaRegistrationResponse.setId(0);
 		schemaRegistrationResponse.setSchemaReference(
-				new SchemaReference(subject, nextVersion, AvroSchemaMessageConverter.AVRO_FORMAT));
+				new SchemaReference(subject, nextVersion, AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT));
 		return schemaRegistrationResponse;
 	}
 
 	@Override
 	public Schema fetch(SchemaReference schemaReference) {
-		if (!AvroSchemaMessageConverter.AVRO_FORMAT.equals(schemaReference.getFormat())) {
+		if (!AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT.equals(schemaReference.getFormat())) {
 			throw new IllegalArgumentException("Only 'avro' is supported by this client");
 		}
 		if (!this.storedSchemas.containsKey(schemaReference.getSubject())) {

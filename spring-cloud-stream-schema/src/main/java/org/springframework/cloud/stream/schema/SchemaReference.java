@@ -94,4 +94,13 @@ public class SchemaReference {
 		result = 31 * result + this.format.hashCode();
 		return result;
 	}
+
+	@Override
+	public String toString() {
+		return "SchemaReference{" +
+				"subject='" + this.subject + '\'' +
+				", version=" + this.version +
+				", format='" + this.format + '\'' +
+				'}';
+	}
 }
