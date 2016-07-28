@@ -29,15 +29,19 @@ public class SchemaReference {
 
 	private int version;
 
-	public SchemaReference(String subject, int version) {
+	private String format;
+
+	public SchemaReference(String subject, int version, String format) {
 		Assert.hasText(subject, "cannot be empty");
 		Assert.isTrue(version > 0, "must be a positive integer");
+		Assert.hasText(format, "cannot be empty");
 		this.subject = subject;
 		this.version = version;
+		this.format = format;
 	}
 
 	public String getSubject() {
-		return subject;
+		return this.subject;
 	}
 
 	public void setSubject(String subject) {
@@ -46,12 +50,21 @@ public class SchemaReference {
 	}
 
 	public int getVersion() {
-		return version;
+		return this.version;
 	}
 
 	public void setVersion(int version) {
 		Assert.isTrue(version > 0, "must be a positive integer");
 		this.version = version;
+	}
+
+	public String getFormat() {
+		return this.format;
+	}
+
+	public void setFormat(String format) {
+		Assert.hasText(format, "cannot be empty");
+		this.format = format;
 	}
 
 	@Override
@@ -65,17 +78,21 @@ public class SchemaReference {
 
 		SchemaReference that = (SchemaReference) o;
 
-		if (version != that.version) {
+		if (this.version != that.version) {
 			return false;
 		}
-		return subject.equals(that.subject);
+		if (!this.subject.equals(that.subject)) {
+			return false;
+		}
+		return this.format.equals(that.format);
 
 	}
 
 	@Override
 	public int hashCode() {
-		int result = subject.hashCode();
-		result = 31 * result + version;
+		int result = this.subject.hashCode();
+		result = 31 * result + this.version;
+		result = 31 * result + this.format.hashCode();
 		return result;
 	}
 }

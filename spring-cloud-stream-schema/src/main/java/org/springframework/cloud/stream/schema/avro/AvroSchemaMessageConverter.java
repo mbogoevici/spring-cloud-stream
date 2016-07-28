@@ -65,6 +65,8 @@ import org.springframework.util.StringUtils;
 public class AvroSchemaMessageConverter extends AbstractMessageConverter implements ApplicationContextAware,
 		InitializingBean {
 
+	public static final String AVRO_FORMAT = "avro";
+
 	private static Pattern SCHEMA_WITH_VERSION = Pattern.compile(
 			"application/vnd\\.([\\p{Alnum}\\$\\.]+)\\.v(\\p{Digit}+)\\+avro");
 
@@ -194,7 +196,7 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter impleme
 		if (schemaMatcher.find()) {
 			String subject = schemaMatcher.group(1);
 			Integer version = Integer.parseInt(schemaMatcher.group(2));
-			schemaReference = new SchemaReference(subject, version);
+			schemaReference = new SchemaReference(subject, version, AVRO_FORMAT);
 		}
 		return schemaReference;
 	}
