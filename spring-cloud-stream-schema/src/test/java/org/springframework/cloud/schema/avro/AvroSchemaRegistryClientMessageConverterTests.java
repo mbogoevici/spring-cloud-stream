@@ -29,6 +29,7 @@ import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Sink;
 import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.cloud.stream.schema.ConfluentSchemaRegistryClient;
 import org.springframework.cloud.stream.schema.SchemaRegistryClient;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -120,7 +121,7 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 
 		@Bean
 		public SchemaRegistryClient schemaRegistryClient() {
-			return stubSchemaRegistryClient;
+			return new ConfluentSchemaRegistryClient();
 		}
 	}
 
@@ -137,7 +138,7 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 
 		@Bean
 		public SchemaRegistryClient schemaRegistryClient() {
-			return stubSchemaRegistryClient;
+			return new ConfluentSchemaRegistryClient();
 		}
 
 	}
