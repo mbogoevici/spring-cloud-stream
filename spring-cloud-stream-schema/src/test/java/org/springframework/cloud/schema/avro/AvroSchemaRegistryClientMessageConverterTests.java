@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.avro.reflect.Nullable;
 import org.junit.Test;
 
 import org.springframework.boot.SpringApplication;
@@ -54,9 +53,9 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 				"--spring.cloud.stream.bindings.output.contentType=application/*+avro",
 				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source source = sourceContext.getBean(Source.class);
-		FooPojo firstOutboundFoo = new FooPojo();
-		firstOutboundFoo.setFoo("foo" + UUID.randomUUID().toString());
-		firstOutboundFoo.setBar("foo" + UUID.randomUUID().toString());
+		User1 firstOutboundFoo = new User1();
+		firstOutboundFoo.setFavoriteColor("foo" + UUID.randomUUID().toString());
+		firstOutboundFoo.setName("foo" + UUID.randomUUID().toString());
 		source.output().send(MessageBuilder.withPayload(firstOutboundFoo).build());
 		MessageCollector sourceMessageCollector = sourceContext.getBean(MessageCollector.class);
 		Message<?> outboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
@@ -66,13 +65,13 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 		ConfigurableApplicationContext barSourceContext = SpringApplication.run(AvroSourceApplication.class,
 				"--server.port=0",
 				"--spring.jmx.enabled=false",
-				"--spring.cloud.stream.bindings.output.contentType=application/vnd.org.springframework.cloud.schema.avro.avroschemaregistryclientmessageconvertertests$.foopojo.v1+avro",
+				"--spring.cloud.stream.bindings.output.contentType=application/vnd.org.springframework.cloud.schema.avro.user1.v1+avro",
 				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source barSource = barSourceContext.getBean(Source.class);
-		BarPojo firstOutboundBarPojo = new BarPojo();
-		firstOutboundBarPojo.setFoo("foo" + UUID.randomUUID().toString());
-		firstOutboundBarPojo.setBar("foo" + UUID.randomUUID().toString());
-		barSource.output().send(MessageBuilder.withPayload(firstOutboundBarPojo).build());
+		User2 firstOutboundUser2 = new User2();
+		firstOutboundUser2.setFavoriteColor("foo" + UUID.randomUUID().toString());
+		firstOutboundUser2.setName("foo" + UUID.randomUUID().toString());
+		barSource.output().send(MessageBuilder.withPayload(firstOutboundUser2).build());
 		MessageCollector barSourceMessageCollector = barSourceContext.getBean(MessageCollector.class);
 		Message<?> barOutboundMessage = barSourceMessageCollector.forChannel(barSource.output()).poll(1000,
 				TimeUnit.MILLISECONDS);
@@ -80,9 +79,9 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 		assertThat(barOutboundMessage).isNotNull();
 
 
-		BarPojo secondBarOutboundPojo = new BarPojo();
-		secondBarOutboundPojo.setFoo("foo" + UUID.randomUUID().toString());
-		secondBarOutboundPojo.setBar("foo" + UUID.randomUUID().toString());
+		User2 secondBarOutboundPojo = new User2();
+		secondBarOutboundPojo.setFavoriteColor("foo" + UUID.randomUUID().toString());
+		secondBarOutboundPojo.setName("foo" + UUID.randomUUID().toString());
 		source.output().send(MessageBuilder.withPayload(secondBarOutboundPojo).build());
 		Message<?> secondBarOutboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
 				TimeUnit.MILLISECONDS);
@@ -94,19 +93,23 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 		sink.input().send(outboundMessage);
 		sink.input().send(barOutboundMessage);
 		sink.input().send(secondBarOutboundMessage);
-		List<FooPojo> receivedPojos = sinkContext.getBean(AvroSinkApplication.class).receivedPojos;
+		List<User2> receivedPojos = sinkContext.getBean(AvroSinkApplication.class).receivedPojos;
 		assertThat(receivedPojos).hasSize(3);
 		assertThat(receivedPojos.get(0)).isNotSameAs(firstOutboundFoo);
-		assertThat(receivedPojos.get(0).getFoo()).isEqualTo(firstOutboundFoo.getFoo());
-		assertThat(receivedPojos.get(0).getBar()).isEqualTo(firstOutboundFoo.getBar());
+		assertThat(receivedPojos.get(0).getFavoriteColor()).isEqualTo(firstOutboundFoo.getFavoriteColor());
+		assertThat(receivedPojos.get(0).getName()).isEqualTo(firstOutboundFoo.getName());
+		assertThat(receivedPojos.get(0).getFavoritePlace()).isEqualTo("NYC");
 
-		assertThat(receivedPojos.get(1)).isNotSameAs(firstOutboundBarPojo);
-		assertThat(receivedPojos.get(1).getFoo()).isEqualTo(firstOutboundBarPojo.getFoo());
-		assertThat(receivedPojos.get(1).getBar()).isEqualTo(firstOutboundBarPojo.getBar());
+		assertThat(receivedPojos.get(1)).isNotSameAs(firstOutboundUser2);
+		assertThat(receivedPojos.get(1).getFavoriteColor()).isEqualTo(firstOutboundUser2.getFavoriteColor());
+		assertThat(receivedPojos.get(1).getName()).isEqualTo(firstOutboundUser2.getName());
+		assertThat(receivedPojos.get(1).getFavoritePlace()).isEqualTo("NYC");
+
 
 		assertThat(receivedPojos.get(2)).isNotSameAs(secondBarOutboundPojo);
-		assertThat(receivedPojos.get(2).getFoo()).isEqualTo(secondBarOutboundPojo.getFoo());
-		assertThat(receivedPojos.get(2).getBar()).isEqualTo(secondBarOutboundPojo.getBar());
+		assertThat(receivedPojos.get(2).getFavoriteColor()).isEqualTo(secondBarOutboundPojo.getFavoriteColor());
+		assertThat(receivedPojos.get(2).getName()).isEqualTo(secondBarOutboundPojo.getName());
+		assertThat(receivedPojos.get(2).getFavoritePlace()).isEqualTo(secondBarOutboundPojo.getFavoritePlace());
 
 		sourceContext.close();
 	}
@@ -125,10 +128,10 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 	@EnableAutoConfiguration
 	public static class AvroSinkApplication {
 
-		public List<FooPojo> receivedPojos = new ArrayList<>();
+		public List<User2> receivedPojos = new ArrayList<>();
 
 		@StreamListener(Sink.INPUT)
-		public void listen(FooPojo fooPojo) {
+		public void listen(User2 fooPojo) {
 			receivedPojos.add(fooPojo);
 		}
 
@@ -137,71 +140,5 @@ public class AvroSchemaRegistryClientMessageConverterTests {
 			return stubSchemaRegistryClient;
 		}
 
-	}
-
-	public static class FooPojo {
-
-		@Nullable
-		String foo;
-
-		@Nullable
-		String bar;
-
-		public FooPojo() {
-		}
-
-		public FooPojo(String foo, String bar) {
-			this.foo = foo;
-			this.bar = bar;
-		}
-
-		public String getFoo() {
-			return foo;
-		}
-
-		public void setFoo(String foo) {
-			this.foo = foo;
-		}
-
-		public String getBar() {
-			return bar;
-		}
-
-		public void setBar(String bar) {
-			this.bar = bar;
-		}
-	}
-
-	public static class BarPojo {
-
-		@Nullable
-		String foo;
-
-		@Nullable
-		String bar;
-
-		public BarPojo() {
-		}
-
-		public BarPojo(String foo, String bar) {
-			this.foo = foo;
-			this.bar = bar;
-		}
-
-		public String getFoo() {
-			return foo;
-		}
-
-		public void setFoo(String foo) {
-			this.foo = foo;
-		}
-
-		public String getBar() {
-			return bar;
-		}
-
-		public void setBar(String bar) {
-			this.bar = bar;
-		}
 	}
 }
