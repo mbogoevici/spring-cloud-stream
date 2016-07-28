@@ -87,7 +87,7 @@ abstract class AggregateApplication {
 				.sources(AggregatorParentConfiguration.class)
 				.web(false)
 				.headless(true)
-				.properties("spring.jmx.default-domain="
+				.properties("spring.jmx.default-model="
 						+ AggregatorParentConfiguration.class.getName());
 		return aggregatorParentConfiguration.run(args);
 	}
@@ -110,7 +110,7 @@ abstract class AggregateApplication {
 				.web(false)
 				.main(app)
 				.bannerMode(Mode.OFF)
-				.properties("spring.jmx.default-domain=" + app)
+				.properties("spring.jmx.default-model=" + app)
 				.properties(CHANNEL_NAMESPACE_PROPERTY_NAME + "=" + namespace)
 				.registerShutdownHook(false)
 				.parent(applicationContext);

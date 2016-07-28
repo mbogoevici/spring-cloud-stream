@@ -148,16 +148,16 @@ public class DefaultBinderFactory<T> implements BinderFactory<T>, DisposableBean
 			for (Map.Entry<Object, Object> property : binderProperties.entrySet()) {
 				args.add(String.format("--%s=%s", property.getKey(), property.getValue()));
 			}
-			// Initialize the domain with a unique name based on the bootstrapping context setting
+			// Initialize the model with a unique name based on the bootstrapping context setting
 			ConfigurableEnvironment environment = context != null ? context.getEnvironment() : null;
-			String defaultDomain = environment != null ? environment.getProperty("spring.jmx.default-domain") : null;
+			String defaultDomain = environment != null ? environment.getProperty("spring.jmx.default-model") : null;
 			if (defaultDomain == null) {
 				defaultDomain = "";
 			}
 			else {
 				defaultDomain += ".";
 			}
-			args.add("--spring.jmx.default-domain=" + defaultDomain + "binder." + configurationName);
+			args.add("--spring.jmx.default-model=" + defaultDomain + "binder." + configurationName);
 			List<Class<?>> configurationClasses =
 					new ArrayList<Class<?>>(
 							Arrays.asList(binderConfiguration.getBinderType().getConfigurationClasses()));
