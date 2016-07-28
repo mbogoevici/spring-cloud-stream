@@ -210,7 +210,8 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter {
 			reader = new GenericDatumReader<>(writer, getReaderSchema(writer));
 		}
 		else {
-			reader = new ReflectDatumReader<>(writer, getReaderSchema(writer));
+			reader = new ReflectDatumReader<>((Class<Object>) type);
+			reader.setSchema(getReaderSchema(writer));
 		}
 		return reader;
 	}

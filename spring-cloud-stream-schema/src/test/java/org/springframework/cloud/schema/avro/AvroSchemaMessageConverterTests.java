@@ -54,25 +54,59 @@ public class AvroSchemaMessageConverterTests {
 				"--spring.cloud.stream.bindings.output.contentType=application/*+avro",
 				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source source = sourceContext.getBean(Source.class);
-		FooPojo originalOutboundMessage = new FooPojo();
-		originalOutboundMessage.setFoo("foo" + UUID.randomUUID().toString());
-		originalOutboundMessage.setBar("foo" + UUID.randomUUID().toString());
-		source.output().send(MessageBuilder.withPayload(originalOutboundMessage).build());
+		FooPojo firstOutboundFoo = new FooPojo();
+		firstOutboundFoo.setFoo("foo" + UUID.randomUUID().toString());
+		firstOutboundFoo.setBar("foo" + UUID.randomUUID().toString());
+		source.output().send(MessageBuilder.withPayload(firstOutboundFoo).build());
 		MessageCollector sourceMessageCollector = sourceContext.getBean(MessageCollector.class);
 		Message<?> outboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
 				TimeUnit.MILLISECONDS);
 
-		assertThat(outboundMessage).isNotNull();
+
+		ConfigurableApplicationContext barSourceContext = SpringApplication.run(AvroSourceApplication.class,
+				"--server.port=0",
+				"--spring.jmx.enabled=false",
+				"--spring.cloud.stream.bindings.output.contentType=application/vnd.org.springframework.cloud.schema.avro.avroschemamessageconvertertests$.foopojo.v1+avro",
+				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
+		Source barSource = barSourceContext.getBean(Source.class);
+		BarPojo firstOutboundBarPojo = new BarPojo();
+		firstOutboundBarPojo.setFoo("foo" + UUID.randomUUID().toString());
+		firstOutboundBarPojo.setBar("foo" + UUID.randomUUID().toString());
+		barSource.output().send(MessageBuilder.withPayload(firstOutboundBarPojo).build());
+		MessageCollector barSourceMessageCollector = barSourceContext.getBean(MessageCollector.class);
+		Message<?> barOutboundMessage = barSourceMessageCollector.forChannel(barSource.output()).poll(1000,
+				TimeUnit.MILLISECONDS);
+
+		assertThat(barOutboundMessage).isNotNull();
+
+
+		BarPojo secondBarOutboundPojo = new BarPojo();
+		secondBarOutboundPojo.setFoo("foo" + UUID.randomUUID().toString());
+		secondBarOutboundPojo.setBar("foo" + UUID.randomUUID().toString());
+		source.output().send(MessageBuilder.withPayload(secondBarOutboundPojo).build());
+		Message<?> secondBarOutboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
+				TimeUnit.MILLISECONDS);
+
 
 		ConfigurableApplicationContext sinkContext = SpringApplication.run(AvroSinkApplication.class,
 				"--server.port=0", "--spring.jmx.enabled=false");
 		Sink sink = sinkContext.getBean(Sink.class);
 		sink.input().send(outboundMessage);
+		sink.input().send(barOutboundMessage);
+		sink.input().send(secondBarOutboundMessage);
 		List<FooPojo> receivedPojos = sinkContext.getBean(AvroSinkApplication.class).receivedPojos;
-		assertThat(receivedPojos).hasSize(1);
-		assertThat(receivedPojos.get(0)).isNotSameAs(originalOutboundMessage);
-		assertThat(receivedPojos.get(0).getFoo()).isEqualTo(originalOutboundMessage.getFoo());
-		assertThat(receivedPojos.get(0).getBar()).isEqualTo(originalOutboundMessage.getBar());
+		assertThat(receivedPojos).hasSize(3);
+		assertThat(receivedPojos.get(0)).isNotSameAs(firstOutboundFoo);
+		assertThat(receivedPojos.get(0).getFoo()).isEqualTo(firstOutboundFoo.getFoo());
+		assertThat(receivedPojos.get(0).getBar()).isEqualTo(firstOutboundFoo.getBar());
+
+		assertThat(receivedPojos.get(1)).isNotSameAs(firstOutboundBarPojo);
+		assertThat(receivedPojos.get(1).getFoo()).isEqualTo(firstOutboundBarPojo.getFoo());
+		assertThat(receivedPojos.get(1).getBar()).isEqualTo(firstOutboundBarPojo.getBar());
+
+		assertThat(receivedPojos.get(2)).isNotSameAs(secondBarOutboundPojo);
+		assertThat(receivedPojos.get(2).getFoo()).isEqualTo(secondBarOutboundPojo.getFoo());
+		assertThat(receivedPojos.get(2).getBar()).isEqualTo(secondBarOutboundPojo.getBar());
 
 		sourceContext.close();
 	}
@@ -117,6 +151,39 @@ public class AvroSchemaMessageConverterTests {
 		}
 
 		public FooPojo(String foo, String bar) {
+			this.foo = foo;
+			this.bar = bar;
+		}
+
+		public String getFoo() {
+			return foo;
+		}
+
+		public void setFoo(String foo) {
+			this.foo = foo;
+		}
+
+		public String getBar() {
+			return bar;
+		}
+
+		public void setBar(String bar) {
+			this.bar = bar;
+		}
+	}
+
+	public static class BarPojo {
+
+		@Nullable
+		String foo;
+
+		@Nullable
+		String bar;
+
+		public BarPojo() {
+		}
+
+		public BarPojo(String foo, String bar) {
 			this.foo = foo;
 			this.bar = bar;
 		}
