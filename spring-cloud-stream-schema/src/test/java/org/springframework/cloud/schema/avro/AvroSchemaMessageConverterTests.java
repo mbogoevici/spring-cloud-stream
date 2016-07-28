@@ -16,6 +16,9 @@
 
 package org.springframework.cloud.schema.avro;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.avro.reflect.Nullable;
@@ -47,10 +50,13 @@ public class AvroSchemaMessageConverterTests {
 	public void testSendMessage() throws Exception {
 		ConfigurableApplicationContext sourceContext = SpringApplication.run(AvroSourceApplication.class,
 				"--server.port=0",
-				"--spring.cloud.stream.bindings.output.contentType=application/avro",
+				"--spring.jmx.enabled=false",
+				"--spring.cloud.stream.bindings.output.contentType=application/*+avro",
 				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source source = sourceContext.getBean(Source.class);
 		FooPojo originalOutboundMessage = new FooPojo();
+		originalOutboundMessage.setFoo("foo" + UUID.randomUUID().toString());
+		originalOutboundMessage.setBar("foo" + UUID.randomUUID().toString());
 		source.output().send(MessageBuilder.withPayload(originalOutboundMessage).build());
 		MessageCollector sourceMessageCollector = sourceContext.getBean(MessageCollector.class);
 		Message<?> outboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
@@ -59,10 +65,14 @@ public class AvroSchemaMessageConverterTests {
 		assertThat(outboundMessage).isNotNull();
 
 		ConfigurableApplicationContext sinkContext = SpringApplication.run(AvroSinkApplication.class,
-				"--server.port=0");
+				"--server.port=0", "--spring.jmx.enabled=false");
 		Sink sink = sinkContext.getBean(Sink.class);
 		sink.input().send(outboundMessage);
-
+		List<FooPojo> receivedPojos = sinkContext.getBean(AvroSinkApplication.class).receivedPojos;
+		assertThat(receivedPojos).hasSize(1);
+		assertThat(receivedPojos.get(0)).isNotSameAs(originalOutboundMessage);
+		assertThat(receivedPojos.get(0).getFoo()).isEqualTo(originalOutboundMessage.getFoo());
+		assertThat(receivedPojos.get(0).getBar()).isEqualTo(originalOutboundMessage.getBar());
 
 		sourceContext.close();
 	}
@@ -81,15 +91,18 @@ public class AvroSchemaMessageConverterTests {
 	@EnableAutoConfiguration
 	public static class AvroSinkApplication {
 
+		public List<FooPojo> receivedPojos = new ArrayList<>();
+
 		@StreamListener(Sink.INPUT)
 		public void listen(FooPojo fooPojo) {
-			System.out.println(fooPojo);
+			receivedPojos.add(fooPojo);
 		}
 
 		@Bean
 		public SchemaRegistryClient schemaRegistryClient() {
 			return stubSchemaRegistryClient;
 		}
+
 	}
 
 	public static class FooPojo {
