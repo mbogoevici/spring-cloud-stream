@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema.avro;
+package org.springframework.cloud.stream.schema;
 
 import org.springframework.util.Assert;
 
 /**
  * References a schema through its subject and version.
- *
  * @author Marius Bogoevici
  */
 public class SchemaReference {

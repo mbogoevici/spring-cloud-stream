@@ -47,6 +47,10 @@ import org.apache.avro.specific.SpecificRecord;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.cloud.stream.schema.SchemaNotFoundException;
+import org.springframework.cloud.stream.schema.SchemaReference;
+import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
+import org.springframework.cloud.stream.schema.SchemaRegistryClient;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
@@ -222,20 +226,22 @@ public class AvroSchemaMessageConverter extends AbstractMessageConverter impleme
 			}
 			buf.get(payload);
 			SchemaReference schemaReference = getSchemaReference(mimeType);
-			if (schemaReference == null) {
+			if (schemaReference != null) {
+				Schema schema = this.schemaRegistryClient.fetch(schemaReference);
+				DatumReader<Object> reader = getDatumReader(targetClass, schema);
+				Decoder decoder = DecoderFactory.get().binaryDecoder(payload, null);
+				return reader.read(null, decoder);
+			}
+			else {
 				if (this.logger.isDebugEnabled()) {
 					this.logger.debug("Cannot extract schema reference from " + mimeType);
 				}
-				return null;
 			}
-			Schema schema = this.schemaRegistryClient.fetch(schemaReference);
-			DatumReader<Object> reader = getDatumReader(targetClass, schema);
-			Decoder decoder = DecoderFactory.get().binaryDecoder(payload, null);
-			return reader.read(null, decoder);
 		}
 		catch (IOException e) {
-			return null;
+			// ignore
 		}
+		return null;
 	}
 
 	private DatumWriter<Object> getDatumWriter(Class<?> type, Schema schema) {
