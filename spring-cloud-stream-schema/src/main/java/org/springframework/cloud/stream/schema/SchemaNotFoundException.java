@@ -14,30 +14,14 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema.avro;
+package org.springframework.cloud.stream.schema;
 
 /**
- * @author Marius Bogoevici
+ * @author Vinicius Carvalho
  */
-public class SchemaRegistrationResponse {
+public class SchemaNotFoundException extends RuntimeException {
 
-	private long id;
-
-	private SchemaReference schemaReference;
-
-	public long getId() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	public SchemaReference getSchemaReference() {
-		return schemaReference;
-	}
-
-	public void setSchemaReference(SchemaReference schemaReference) {
-		this.schemaReference = schemaReference;
+	public SchemaNotFoundException(String message) {
+		super(message);
 	}
 }

@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.schema.avro;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -26,28 +25,24 @@ import org.junit.Test;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Sink;
 import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.cloud.stream.schema.ConfluentSchemaRegistryClient;
 import org.springframework.cloud.stream.schema.SchemaRegistryClient;
-import org.springframework.cloud.stream.schema.avro.AvroSchemaMessageConverter;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.io.Resource;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.util.MimeType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Marius Bogoevici
  */
-public class AvroSchemaMessageConverterTests {
+public class AvroSchemaRegistryClientMessageConverterTests {
 
 	static StubSchemaRegistryClient stubSchemaRegistryClient = new StubSchemaRegistryClient();
 
@@ -56,13 +51,12 @@ public class AvroSchemaMessageConverterTests {
 		ConfigurableApplicationContext sourceContext = SpringApplication.run(AvroSourceApplication.class,
 				"--server.port=0",
 				"--spring.jmx.enabled=false",
-				"--schemaLocation=classpath:schemas/users_v1.schema",
-				"--spring.cloud.stream.schemaRegistryClient.enabled=false",
-				"--spring.cloud.stream.bindings.output.contentType=avro/bytes");
+				"--spring.cloud.stream.bindings.output.contentType=application/*+avro",
+				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source source = sourceContext.getBean(Source.class);
 		User1 firstOutboundFoo = new User1();
-		firstOutboundFoo.setName("foo" + UUID.randomUUID().toString());
 		firstOutboundFoo.setFavoriteColor("foo" + UUID.randomUUID().toString());
+		firstOutboundFoo.setName("foo" + UUID.randomUUID().toString());
 		source.output().send(MessageBuilder.withPayload(firstOutboundFoo).build());
 		MessageCollector sourceMessageCollector = sourceContext.getBean(MessageCollector.class);
 		Message<?> outboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
@@ -72,13 +66,11 @@ public class AvroSchemaMessageConverterTests {
 		ConfigurableApplicationContext barSourceContext = SpringApplication.run(AvroSourceApplication.class,
 				"--server.port=0",
 				"--spring.jmx.enabled=false",
-				"--schemaLocation=classpath:schemas/users_v1.schema",
-				"--spring.cloud.stream.schemaRegistryClient.enabled=false",
-				"--spring.cloud.stream.bindings.output.contentType=avro/bytes");
+				"--spring.cloud.stream.bindings.output.contentType=application/vnd.org.springframework.cloud.schema.avro.user1.v1+avro",
+				"--spring.cloud.stream.schema.avro.dynamicSchemaGenerationEnabled=true");
 		Source barSource = barSourceContext.getBean(Source.class);
 		User2 firstOutboundUser2 = new User2();
 		firstOutboundUser2.setFavoriteColor("foo" + UUID.randomUUID().toString());
-		firstOutboundUser2.setFavoritePlace("foo" + UUID.randomUUID().toString());
 		firstOutboundUser2.setName("foo" + UUID.randomUUID().toString());
 		barSource.output().send(MessageBuilder.withPayload(firstOutboundUser2).build());
 		MessageCollector barSourceMessageCollector = barSourceContext.getBean(MessageCollector.class);
@@ -88,84 +80,65 @@ public class AvroSchemaMessageConverterTests {
 		assertThat(barOutboundMessage).isNotNull();
 
 
-		User2 secondUser2OutboundPojo = new User2();
-		secondUser2OutboundPojo.setFavoriteColor("foo" + UUID.randomUUID().toString());
-		secondUser2OutboundPojo.setFavoritePlace("foo" + UUID.randomUUID().toString());
-		secondUser2OutboundPojo.setName("foo" + UUID.randomUUID().toString());
-		source.output().send(MessageBuilder.withPayload(secondUser2OutboundPojo).build());
+		User2 secondBarOutboundPojo = new User2();
+		secondBarOutboundPojo.setFavoriteColor("foo" + UUID.randomUUID().toString());
+		secondBarOutboundPojo.setName("foo" + UUID.randomUUID().toString());
+		source.output().send(MessageBuilder.withPayload(secondBarOutboundPojo).build());
 		Message<?> secondBarOutboundMessage = sourceMessageCollector.forChannel(source.output()).poll(1000,
 				TimeUnit.MILLISECONDS);
 
 
 		ConfigurableApplicationContext sinkContext = SpringApplication.run(AvroSinkApplication.class,
-				"--server.port=0",
-				"--spring.jmx.enabled=false",
-				"--spring.cloud.stream.schemaRegistryClient.enabled=false",
-				"--schemaLocation=classpath:schemas/users_v1.schema");
+				"--server.port=0", "--spring.jmx.enabled=false");
 		Sink sink = sinkContext.getBean(Sink.class);
 		sink.input().send(outboundMessage);
 		sink.input().send(barOutboundMessage);
 		sink.input().send(secondBarOutboundMessage);
-		List<User1> receivedUsers = sinkContext.getBean(AvroSinkApplication.class).receivedUsers;
-		assertThat(receivedUsers).hasSize(3);
-		assertThat(receivedUsers.get(0)).isNotSameAs(firstOutboundFoo);
-		assertThat(receivedUsers.get(0).getFavoriteColor()).isEqualTo(firstOutboundFoo.getFavoriteColor());
-		assertThat(receivedUsers.get(0).getName()).isEqualTo(firstOutboundFoo.getName());
+		List<User2> receivedPojos = sinkContext.getBean(AvroSinkApplication.class).receivedPojos;
+		assertThat(receivedPojos).hasSize(3);
+		assertThat(receivedPojos.get(0)).isNotSameAs(firstOutboundFoo);
+		assertThat(receivedPojos.get(0).getFavoriteColor()).isEqualTo(firstOutboundFoo.getFavoriteColor());
+		assertThat(receivedPojos.get(0).getName()).isEqualTo(firstOutboundFoo.getName());
+		assertThat(receivedPojos.get(0).getFavoritePlace()).isEqualTo("NYC");
 
-		assertThat(receivedUsers.get(1)).isNotSameAs(firstOutboundUser2);
-		assertThat(receivedUsers.get(1).getFavoriteColor()).isEqualTo(firstOutboundUser2.getFavoriteColor());
-		assertThat(receivedUsers.get(1).getName()).isEqualTo(firstOutboundUser2.getName());
+		assertThat(receivedPojos.get(1)).isNotSameAs(firstOutboundUser2);
+		assertThat(receivedPojos.get(1).getFavoriteColor()).isEqualTo(firstOutboundUser2.getFavoriteColor());
+		assertThat(receivedPojos.get(1).getName()).isEqualTo(firstOutboundUser2.getName());
+		assertThat(receivedPojos.get(1).getFavoritePlace()).isEqualTo("NYC");
 
-		assertThat(receivedUsers.get(2)).isNotSameAs(secondUser2OutboundPojo);
-		assertThat(receivedUsers.get(2).getFavoriteColor()).isEqualTo(secondUser2OutboundPojo.getFavoriteColor());
-		assertThat(receivedUsers.get(2).getName()).isEqualTo(secondUser2OutboundPojo.getName());
+
+		assertThat(receivedPojos.get(2)).isNotSameAs(secondBarOutboundPojo);
+		assertThat(receivedPojos.get(2).getFavoriteColor()).isEqualTo(secondBarOutboundPojo.getFavoriteColor());
+		assertThat(receivedPojos.get(2).getName()).isEqualTo(secondBarOutboundPojo.getName());
+		assertThat(receivedPojos.get(2).getFavoritePlace()).isEqualTo(secondBarOutboundPojo.getFavoritePlace());
 
 		sourceContext.close();
 	}
 
 	@EnableBinding(Source.class)
 	@EnableAutoConfiguration
-	@ConfigurationProperties
 	public static class AvroSourceApplication {
 
 		@Bean
 		public SchemaRegistryClient schemaRegistryClient() {
-			return stubSchemaRegistryClient;
-		}
-
-		private Resource schemaLocation;
-
-		public void setSchemaLocation(Resource schemaLocation) {
-			this.schemaLocation = schemaLocation;
-		}
-
-		@Bean
-		public MessageConverter userMessageConverter() throws IOException {
-			return new AvroSchemaMessageConverter(MimeType.valueOf("avro/bytes"), schemaLocation);
+			return new ConfluentSchemaRegistryClient();
 		}
 	}
 
 	@EnableBinding(Sink.class)
 	@EnableAutoConfiguration
-	@ConfigurationProperties
 	public static class AvroSinkApplication {
 
-		public List<User1> receivedUsers = new ArrayList<>();
+		public List<User2> receivedPojos = new ArrayList<>();
 
 		@StreamListener(Sink.INPUT)
-		public void listen(User1 user) {
-			receivedUsers.add(user);
-		}
-
-		private Resource schemaLocation;
-
-		public void setSchemaLocation(Resource schemaLocation) {
-			this.schemaLocation = schemaLocation;
+		public void listen(User2 fooPojo) {
+			receivedPojos.add(fooPojo);
 		}
 
 		@Bean
-		public MessageConverter userMessageConverter() throws IOException {
-			return new AvroSchemaMessageConverter(MimeType.valueOf("avro/bytes"), schemaLocation);
+		public SchemaRegistryClient schemaRegistryClient() {
+			return new ConfluentSchemaRegistryClient();
 		}
 
 	}
