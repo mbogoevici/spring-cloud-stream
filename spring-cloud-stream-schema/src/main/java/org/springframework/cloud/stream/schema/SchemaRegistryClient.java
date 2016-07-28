@@ -33,10 +33,17 @@ public interface SchemaRegistryClient {
 	SchemaRegistrationResponse register(String subject, Schema schema);
 
 	/**
-	 * Retrieves a schema by its identifier.
+	 * Retrieves a schema by its reference (subject and version).
 	 * @param schemaReference a {@link SchemaReference} used to identify the target schema.
 	 * @return
 	 */
 	Schema fetch(SchemaReference schemaReference);
+
+	/**
+	 * Retrieves a schema by its identifier.
+	 * @param id the id of the target schema.
+	 * @return
+	 */
+	Schema fetch(Integer id);
 
 }

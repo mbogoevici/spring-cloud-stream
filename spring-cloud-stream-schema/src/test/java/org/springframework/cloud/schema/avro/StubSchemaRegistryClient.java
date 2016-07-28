@@ -19,6 +19,7 @@ package org.springframework.cloud.schema.avro;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.avro.Schema;
 
@@ -33,19 +34,23 @@ import org.springframework.cloud.stream.schema.avro.AvroSchemaRegistryClientMess
  */
 public class StubSchemaRegistryClient implements SchemaRegistryClient {
 
-	private Map<String, Map<Integer, Schema>> storedSchemas = new HashMap<>();
+	private final AtomicInteger index = new AtomicInteger(0);
+
+	private final Map<Integer, Schema> schemasById = new HashMap<>();
+
+	private final Map<String, Map<Integer, SchemaWithId>> storedSchemas = new HashMap<>();
 
 	@Override
 	public SchemaRegistrationResponse register(String subject, Schema schema) {
 		if (!this.storedSchemas.containsKey(subject)) {
-			this.storedSchemas.put(subject, new TreeMap<Integer, Schema>());
+			this.storedSchemas.put(subject, new TreeMap<Integer, SchemaWithId>());
 		}
-		Map<Integer, Schema> schemaVersions = this.storedSchemas.get(subject);
-		for (Map.Entry<Integer, Schema> integerSchemaEntry : schemaVersions.entrySet()) {
+		Map<Integer, SchemaWithId> schemaVersions = this.storedSchemas.get(subject);
+		for (Map.Entry<Integer, SchemaWithId> integerSchemaEntry : schemaVersions.entrySet()) {
 
-			if (integerSchemaEntry.getValue().equals(schema)) {
+			if (integerSchemaEntry.getValue().getSchema().equals(schema)) {
 				SchemaRegistrationResponse schemaRegistrationResponse = new SchemaRegistrationResponse();
-				schemaRegistrationResponse.setId(0);
+				schemaRegistrationResponse.setId(integerSchemaEntry.getValue().getId());
 				schemaRegistrationResponse.setSchemaReference(
 						new SchemaReference(subject, integerSchemaEntry.getKey(),
 								AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT));
@@ -53,11 +58,13 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 			}
 		}
 		int nextVersion = schemaVersions.size() + 1;
-		schemaVersions.put(nextVersion, schema);
+		int id = this.index.incrementAndGet();
+		schemaVersions.put(nextVersion, new SchemaWithId(id, schema));
 		SchemaRegistrationResponse schemaRegistrationResponse = new SchemaRegistrationResponse();
-		schemaRegistrationResponse.setId(0);
+		schemaRegistrationResponse.setId(this.index.getAndIncrement());
 		schemaRegistrationResponse.setSchemaReference(
 				new SchemaReference(subject, nextVersion, AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT));
+		this.schemasById.put(id, schema);
 		return schemaRegistrationResponse;
 	}
 
@@ -72,6 +79,32 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 		if (!this.storedSchemas.get(schemaReference.getSubject()).containsKey(schemaReference.getVersion())) {
 			throw new SchemaNotFoundException("Not found: " + schemaReference);
 		}
-		return this.storedSchemas.get(schemaReference.getSubject()).get(schemaReference.getVersion());
+		return this.storedSchemas.get(schemaReference.getSubject()).get(schemaReference.getVersion()).getSchema();
 	}
+
+	@Override
+	public Schema fetch(Integer id) {
+		return this.schemasById.get(id);
+	}
+
+	static class SchemaWithId {
+
+		int id;
+
+		Schema schema;
+
+		SchemaWithId(int id, Schema schema) {
+			this.id = id;
+			this.schema = schema;
+		}
+
+		public int getId() {
+			return this.id;
+		}
+
+		public Schema getSchema() {
+			return this.schema;
+		}
+	}
+
 }
