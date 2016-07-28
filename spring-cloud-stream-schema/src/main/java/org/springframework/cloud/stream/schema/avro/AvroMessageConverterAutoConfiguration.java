@@ -18,6 +18,7 @@ package org.springframework.cloud.stream.schema.avro;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.StringConvertingContentTypeResolver;
 import org.springframework.cloud.stream.schema.SchemaRegistryClient;
@@ -31,6 +32,7 @@ import org.springframework.util.StringUtils;
  */
 @Configuration
 @ConditionalOnClass(name = "org.apache.avro.Schema")
+@ConditionalOnProperty(value = "spring.cloud.stream.schemaRegistryClient.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AvroMessageConverterProperties.class)
 public class AvroMessageConverterAutoConfiguration {
 
@@ -38,17 +40,22 @@ public class AvroMessageConverterAutoConfiguration {
 	private AvroMessageConverterProperties avroMessageConverterProperties;
 
 	@Bean
-	public AvroSchemaMessageConverter avroSchemaMessageConverter(SchemaRegistryClient schemaRegistryClient) {
-		AvroSchemaMessageConverter avroSchemaMessageConverter = new AvroSchemaMessageConverter(schemaRegistryClient);
-		avroSchemaMessageConverter.setDynamicSchemaGenerationEnabled(
+	public AvroSchemaRegistryClientMessageConverter avroSchemaMessageConverter(
+			SchemaRegistryClient schemaRegistryClient) {
+		AvroSchemaRegistryClientMessageConverter
+				avroSchemaRegistryClientMessageConverter = new AvroSchemaRegistryClientMessageConverter(
+				schemaRegistryClient);
+		avroSchemaRegistryClientMessageConverter.setDynamicSchemaGenerationEnabled(
 				this.avroMessageConverterProperties.isDynamicSchemaGenerationEnabled());
-		avroSchemaMessageConverter.setContentTypeResolver(new StringConvertingContentTypeResolver());
+		avroSchemaRegistryClientMessageConverter.setContentTypeResolver(new StringConvertingContentTypeResolver());
 		if (this.avroMessageConverterProperties.getReaderSchema() != null) {
-			avroSchemaMessageConverter.setReaderSchema(this.avroMessageConverterProperties.getReaderSchema());
+			avroSchemaRegistryClientMessageConverter.setReaderSchema(
+					this.avroMessageConverterProperties.getReaderSchema());
 		}
 		if (StringUtils.hasText(this.avroMessageConverterProperties.getSchemaLocations())) {
-			avroSchemaMessageConverter.setSchemaLocations(this.avroMessageConverterProperties.getSchemaLocations());
+			avroSchemaRegistryClientMessageConverter.setSchemaLocations(
+					this.avroMessageConverterProperties.getSchemaLocations());
 		}
-		return avroSchemaMessageConverter;
+		return avroSchemaRegistryClientMessageConverter;
 	}
 }
