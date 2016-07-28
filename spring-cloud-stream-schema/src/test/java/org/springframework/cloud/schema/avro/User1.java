@@ -25,7 +25,7 @@ public class User1 {
 
 	@Nullable
 	private String name;
-	
+
 	private int favoriteNumber;
 
 	@Nullable
