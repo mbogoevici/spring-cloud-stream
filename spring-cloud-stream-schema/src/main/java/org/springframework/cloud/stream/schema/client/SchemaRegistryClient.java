@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema;
+package org.springframework.cloud.stream.schema.client;
 
-import org.apache.avro.Schema;
+import org.springframework.cloud.stream.schema.SchemaReference;
+import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
 
 /**
  * @author Vinicius Carvalho
@@ -30,20 +31,20 @@ public interface SchemaRegistryClient {
 	 * @param schema
 	 * @return a {@link SchemaRegistrationResponse} representing the result of the operation
 	 */
-	SchemaRegistrationResponse register(String subject, Schema schema);
+	SchemaRegistrationResponse register(String subject, String format, String schema);
 
 	/**
 	 * Retrieves a schema by its reference (subject and version).
 	 * @param schemaReference a {@link SchemaReference} used to identify the target schema.
 	 * @return
 	 */
-	Schema fetch(SchemaReference schemaReference);
+	String fetch(SchemaReference schemaReference);
 
 	/**
 	 * Retrieves a schema by its identifier.
 	 * @param id the id of the target schema.
 	 * @return
 	 */
-	Schema fetch(Integer id);
+	String fetch(Integer id);
 
 }

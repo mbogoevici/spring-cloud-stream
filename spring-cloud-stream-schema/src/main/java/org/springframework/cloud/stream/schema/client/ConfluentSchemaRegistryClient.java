@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema;
+package org.springframework.cloud.stream.schema.client;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,16 +22,19 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.avro.Schema;
 
+import org.springframework.cloud.stream.schema.SchemaReference;
+import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
 /**
  * @author Vinicius Carvalho
+ * @author Marius Bogoevici
  */
 public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 
@@ -51,7 +54,8 @@ public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public SchemaRegistrationResponse register(String subject, Schema schema) {
+	public SchemaRegistrationResponse register(String subject, String format, String schema) {
+		Assert.isTrue("avro".equals(format), "Only Avro is supported");
 		String path = String.format("/subjects/%s/versions", subject);
 		HttpHeaders headers = new HttpHeaders();
 		headers.put("Accept",
@@ -60,7 +64,7 @@ public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 		headers.add("Content-Type", "application/json");
 		Integer id = null;
 		try {
-			String payload = this.mapper.writeValueAsString(Collections.singletonMap("schema", schema.toString()));
+			String payload = this.mapper.writeValueAsString(Collections.singletonMap("schema", schema));
 			HttpEntity<String> request = new HttpEntity<>(payload, headers);
 			ResponseEntity<Map> response = this.template.exchange(this.endpoint + path, HttpMethod.POST, request,
 					Map.class);
@@ -76,7 +80,7 @@ public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public Schema fetch(SchemaReference schemaReference) {
+	public String fetch(SchemaReference schemaReference) {
 		String path = String.format("/schemas/ids/%d", schemaReference.getVersion());
 		HttpHeaders headers = new HttpHeaders();
 		headers.put("Accept",
@@ -86,13 +90,11 @@ public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 		HttpEntity<String> request = new HttpEntity<>("", headers);
 		ResponseEntity<Map> response = this.template.exchange(this.endpoint + path, HttpMethod.GET, request, Map
 				.class);
-		String schemaString = (String) response.getBody().get("schema");
-		Schema.Parser parser = new Schema.Parser();
-		return parser.parse(schemaString);
+		return (String) response.getBody().get("schema");
 	}
 
 	@Override
-	public Schema fetch(Integer id) {
+	public String fetch(Integer id) {
 		String path = String.format("/schemas/ids/%d", id);
 		HttpHeaders headers = new HttpHeaders();
 		headers.put("Accept",
@@ -102,8 +104,6 @@ public class ConfluentSchemaRegistryClient implements SchemaRegistryClient {
 		HttpEntity<String> request = new HttpEntity<>("", headers);
 		ResponseEntity<Map> response = this.template.exchange(this.endpoint + path, HttpMethod.GET, request, Map
 				.class);
-		String schemaString = (String) response.getBody().get("schema");
-		Schema.Parser parser = new Schema.Parser();
-		return parser.parse(schemaString);
+		return (String) response.getBody().get("schema");
 	}
 }

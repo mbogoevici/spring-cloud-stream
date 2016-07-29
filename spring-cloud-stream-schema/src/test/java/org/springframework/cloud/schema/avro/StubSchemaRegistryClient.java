@@ -21,13 +21,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.avro.Schema;
-
 import org.springframework.cloud.stream.schema.SchemaNotFoundException;
 import org.springframework.cloud.stream.schema.SchemaReference;
 import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
-import org.springframework.cloud.stream.schema.SchemaRegistryClient;
 import org.springframework.cloud.stream.schema.avro.AvroSchemaRegistryClientMessageConverter;
+import org.springframework.cloud.stream.schema.client.SchemaRegistryClient;
 
 /**
  * @author Marius Bogoevici
@@ -36,12 +34,12 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 
 	private final AtomicInteger index = new AtomicInteger(0);
 
-	private final Map<Integer, Schema> schemasById = new HashMap<>();
+	private final Map<Integer, String> schemasById = new HashMap<>();
 
 	private final Map<String, Map<Integer, SchemaWithId>> storedSchemas = new HashMap<>();
 
 	@Override
-	public SchemaRegistrationResponse register(String subject, Schema schema) {
+	public SchemaRegistrationResponse register(String subject, String format, String schema) {
 		if (!this.storedSchemas.containsKey(subject)) {
 			this.storedSchemas.put(subject, new TreeMap<Integer, SchemaWithId>());
 		}
@@ -69,7 +67,7 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public Schema fetch(SchemaReference schemaReference) {
+	public String fetch(SchemaReference schemaReference) {
 		if (!AvroSchemaRegistryClientMessageConverter.AVRO_FORMAT.equals(schemaReference.getFormat())) {
 			throw new IllegalArgumentException("Only 'avro' is supported by this client");
 		}
@@ -83,7 +81,7 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public Schema fetch(Integer id) {
+	public String fetch(Integer id) {
 		return this.schemasById.get(id);
 	}
 
@@ -91,9 +89,9 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 
 		int id;
 
-		Schema schema;
+		String schema;
 
-		SchemaWithId(int id, Schema schema) {
+		SchemaWithId(int id, String schema) {
 			this.id = id;
 			this.schema = schema;
 		}
@@ -102,7 +100,7 @@ public class StubSchemaRegistryClient implements SchemaRegistryClient {
 			return this.id;
 		}
 
-		public Schema getSchema() {
+		public String getSchema() {
 			return this.schema;
 		}
 	}

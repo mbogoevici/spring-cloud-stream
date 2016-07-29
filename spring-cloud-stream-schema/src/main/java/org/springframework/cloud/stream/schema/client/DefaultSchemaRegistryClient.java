@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.springframework.cloud.stream.schema;
+package org.springframework.cloud.stream.schema.client;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.avro.Schema;
-
+import org.springframework.cloud.stream.schema.SchemaReference;
+import org.springframework.cloud.stream.schema.SchemaRegistrationResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
@@ -45,11 +45,11 @@ public class DefaultSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public SchemaRegistrationResponse register(String subject, Schema schema) {
+	public SchemaRegistrationResponse register(String subject, String format, String schema) {
 		Map<String, String> requestBody = new HashMap<>();
 		requestBody.put("subject", subject);
-		requestBody.put("format", "avro");
-		requestBody.put("definition", schema.toString(true));
+		requestBody.put("format", format);
+		requestBody.put("definition", schema);
 		ResponseEntity<Map> responseEntity = this.template.postForEntity(this.endpoint, requestBody, Map.class);
 		if (responseEntity.getStatusCode().is2xxSuccessful()) {
 			SchemaRegistrationResponse registrationResponse = new SchemaRegistrationResponse();
@@ -64,7 +64,7 @@ public class DefaultSchemaRegistryClient implements SchemaRegistryClient {
 	}
 
 	@Override
-	public Schema fetch(SchemaReference schemaReference) {
+	public String fetch(SchemaReference schemaReference) {
 		ResponseEntity<Map> responseEntity = this.template.getForEntity(
 				this.endpoint + "/" + schemaReference.getSubject() + "/" + schemaReference
 						.getFormat() + "/v" + schemaReference
@@ -72,16 +72,16 @@ public class DefaultSchemaRegistryClient implements SchemaRegistryClient {
 		if (!responseEntity.getStatusCode().is2xxSuccessful()) {
 			throw new RuntimeException("Failed to fetch schema: " + responseEntity.toString());
 		}
-		return new Schema.Parser().parse((String) responseEntity.getBody().get("definition"));
+		return (String) responseEntity.getBody().get("definition");
 	}
 
 	@Override
-	public Schema fetch(Integer id) {
+	public String fetch(Integer id) {
 		ResponseEntity<Map> responseEntity = this.template.getForEntity(
 				this.endpoint + "/schemas/" + id, Map.class);
 		if (!responseEntity.getStatusCode().is2xxSuccessful()) {
 			throw new RuntimeException("Failed to fetch schema: " + responseEntity.toString());
 		}
-		return new Schema.Parser().parse((String) responseEntity.getBody().get("definition"));
+		return (String) responseEntity.getBody().get("definition");
 	}
 }

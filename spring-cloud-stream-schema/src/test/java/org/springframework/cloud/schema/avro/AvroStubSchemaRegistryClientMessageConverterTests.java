@@ -29,7 +29,7 @@ import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Sink;
 import org.springframework.cloud.stream.messaging.Source;
-import org.springframework.cloud.stream.schema.SchemaRegistryClient;
+import org.springframework.cloud.stream.schema.client.SchemaRegistryClient;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Marius Bogoevici
  */
-public class AvroSchemaRegistryClientMessageConverterTests {
+public class AvroStubSchemaRegistryClientMessageConverterTests {
 
 	static SchemaRegistryClient stubSchemaRegistryClient = new StubSchemaRegistryClient();
 

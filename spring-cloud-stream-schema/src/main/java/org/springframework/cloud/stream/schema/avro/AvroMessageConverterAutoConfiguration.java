@@ -17,11 +17,12 @@
 package org.springframework.cloud.stream.schema.avro;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.StringConvertingContentTypeResolver;
-import org.springframework.cloud.stream.schema.SchemaRegistryClient;
+import org.springframework.cloud.stream.schema.client.SchemaRegistryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
 @Configuration
 @ConditionalOnClass(name = "org.apache.avro.Schema")
 @ConditionalOnProperty(value = "spring.cloud.stream.schemaRegistryClient.enabled", matchIfMissing = true)
+@ConditionalOnBean(type = "org.springframework.cloud.stream.schema.client.SchemaRegistryClient")
 @EnableConfigurationProperties(AvroMessageConverterProperties.class)
 public class AvroMessageConverterAutoConfiguration {
 
