@@ -58,14 +58,14 @@ public class ServerController {
 	@RequestMapping(method = RequestMethod.POST, path = "/", consumes = "application/json", produces = "application/json")
 	public synchronized ResponseEntity<Schema> register(@RequestBody Schema schema,
 			UriComponentsBuilder builder) {
-		List<Schema> registeredEntities = repository.findBySubjectAndFormatOrderByVersion(
+		List<Schema> registeredEntities = this.repository.findBySubjectAndFormatOrderByVersion(
 				schema.getSubject(), schema.getFormat());
-		SchemaValidator validator = validators.get(schema.getFormat());
+		SchemaValidator validator = this.validators.get(schema.getFormat());
 
 		if (validator == null) {
 			throw new UnsupportedFormatException(String.format(
 					"Invalid format, supported types are: %s",
-					StringUtils.collectionToCommaDelimitedString(validators.keySet())));
+					StringUtils.collectionToCommaDelimitedString(this.validators.keySet())));
 		}
 
 		if (!validator.isValid(schema.getDefinition())) {
@@ -75,7 +75,7 @@ public class ServerController {
 		Schema result;
 		if (registeredEntities == null || registeredEntities.size() == 0) {
 			schema.setVersion(1);
-			result = repository.save(schema);
+			result = this.repository.save(schema);
 		}
 		else {
 			result = validator.match(registeredEntities, schema.getDefinition());
@@ -83,7 +83,7 @@ public class ServerController {
 				schema.setVersion(
 						registeredEntities.get(registeredEntities.size() - 1).getVersion()
 								+ 1);
-				result = repository.save(schema);
+				result = this.repository.save(schema);
 			}
 
 		}
@@ -94,7 +94,7 @@ public class ServerController {
 						.buildAndExpand(result.getSubject(), result.getFormat(),
 								result.getVersion())
 						.toString());
-		ResponseEntity<Schema> response = new ResponseEntity<Schema>(result, headers,
+		ResponseEntity<Schema> response = new ResponseEntity<>(result, headers,
 				HttpStatus.CREATED);
 
 		return response;
@@ -105,8 +105,17 @@ public class ServerController {
 	public ResponseEntity<Schema> findOne(@PathVariable("subject") String subject,
 			@PathVariable("format") String format,
 			@PathVariable("version") Integer version) {
-		Schema schema = repository.findOneBySubjectAndFormatAndVersion(subject, format,
+		Schema schema = this.repository.findOneBySubjectAndFormatAndVersion(subject, format,
 				version);
+		if (schema == null) {
+			throw new SchemaNotFoundException("Could not find Schema");
+		}
+		return new ResponseEntity<>(schema, HttpStatus.OK);
+	}
+
+	@RequestMapping(method = RequestMethod.GET, produces = "application/json", path = "/schemas/{id}")
+	public ResponseEntity<Schema> findOne(@PathVariable("id") Integer id) {
+		Schema schema = this.repository.findOne(id);
 		if (schema == null) {
 			throw new SchemaNotFoundException("Could not find Schema");
 		}

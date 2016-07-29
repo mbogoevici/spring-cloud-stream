@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class AvroSchemaRegistryClientMessageConverterTests {
 
-	static StubSchemaRegistryClient stubSchemaRegistryClient = new StubSchemaRegistryClient();
+	static SchemaRegistryClient stubSchemaRegistryClient = new StubSchemaRegistryClient();
 
 	@Test
 	public void testSendMessage() throws Exception {
