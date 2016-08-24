@@ -16,11 +16,15 @@
 
 package org.springframework.cloud.stream.reactive;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import reactor.core.publisher.Flux;
 
 import org.springframework.cloud.stream.binding.StreamListenerResultAdapter;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -28,12 +32,72 @@ import org.springframework.messaging.MessageChannel;
 /**
  * A {@link org.springframework.cloud.stream.binding.StreamListenerResultAdapter} from a {@link Flux}
  * return type to a bound {@link MessageChannel}.
+ *
  * @author Marius Bogoevici
  */
 public class FluxToMessageChannelResultAdapter
-		implements StreamListenerResultAdapter<Flux<?>, MessageChannel> {
+		implements StreamListenerResultAdapter<Flux<?>, MessageChannel>, SmartLifecycle {
 
-	private Log log = LogFactory.getLog(FluxToMessageChannelResultAdapter.class);
+	private final Log log = LogFactory.getLog(FluxToMessageChannelResultAdapter.class);
+
+	private final Object lifecycleMonitor = new Object();
+
+	private volatile ExecutorService executor;
+
+	private volatile boolean autoStartup = true;
+
+	private volatile boolean running;
+
+	public void setAutoStartup(boolean autoStartup) {
+		this.autoStartup = autoStartup;
+	}
+
+	@Override
+	public boolean isAutoStartup() {
+		return this.autoStartup;
+	}
+
+	@Override
+	public void stop(Runnable runnable) {
+		if (this.running) {
+			synchronized (lifecycleMonitor) {
+				if (this.running) {
+					this.executor.shutdown();
+					this.executor = null;
+					this.running = false;
+				}
+				if (runnable != null) {
+					runnable.run();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void start() {
+		if (!this.running) {
+			synchronized (lifecycleMonitor) {
+				if (!this.running) {
+					this.executor = Executors.newSingleThreadExecutor();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void stop() {
+		this.stop(null);
+	}
+
+	@Override
+	public boolean isRunning() {
+		return this.running;
+	}
+
+	@Override
+	public int getPhase() {
+		return 0;
+	}
 
 	@Override
 	public boolean supports(Class<?> resultType, Class<?> boundType) {
@@ -44,8 +108,15 @@ public class FluxToMessageChannelResultAdapter
 		streamListenerResult
 				.doOnError(e -> this.log.error("Error while processing result", e))
 				.retry()
+				.onBackpressureBuffer()
 				.subscribe(
-						result -> boundElement.send(result instanceof Message<?> ? (Message<?>) result
-								: MessageBuilder.withPayload(result).build()));
+						result -> {
+							if (result instanceof Message<?>) {
+								executor.submit(() -> boundElement.send((Message<?>) result));
+							}
+							else {
+								executor.submit(() -> boundElement.send(MessageBuilder.withPayload(result).build()));
+							}
+						});
 	}
 }
