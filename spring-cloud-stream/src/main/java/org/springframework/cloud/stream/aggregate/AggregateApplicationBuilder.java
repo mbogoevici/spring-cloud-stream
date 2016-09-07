@@ -18,12 +18,19 @@ package org.springframework.cloud.stream.aggregate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.CommandLinePropertySource;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.env.PropertySources;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.util.StringUtils;
 
 /**
@@ -51,11 +58,11 @@ public class AggregateApplicationBuilder {
 	private List<String> parentArgs = new ArrayList<>();
 
 	public AggregateApplicationBuilder(String... args) {
-		this(new Object[]{ParentConfiguration.class}, args);
+		this(new Object[] { ParentConfiguration.class }, args);
 	}
 
 	public AggregateApplicationBuilder(Object source, String... args) {
-		this(new Object[]{source}, args);
+		this(new Object[] { source }, args);
 	}
 
 	public AggregateApplicationBuilder(Object[] sources, String[] args) {
@@ -75,7 +82,7 @@ public class AggregateApplicationBuilder {
 	}
 
 	public AggregateApplicationBuilder parent(Object source, String... args) {
-		return parent(new Object[]{source}, args);
+		return parent(new Object[] { source }, args);
 	}
 
 	public AggregateApplicationBuilder parent(Object[] sources, String[] args) {
@@ -105,24 +112,83 @@ public class AggregateApplicationBuilder {
 			apps.add(sinkConfigurer);
 		}
 		LinkedHashMap<Class<?>, String> appsToEmbed = new LinkedHashMap<>();
+		LinkedHashMap<AppConfigurer, String> appConfigurers = new LinkedHashMap<>();
 		for (int i = 0; i < apps.size(); i++) {
 			AppConfigurer<?> appConfigurer = apps.get(i);
 			Class<?> appToEmbed = appConfigurer.getApp();
 			// Always update namespace before preparing SharedChannelRegistry
 			if (appConfigurer.namespace == null) {
-				appConfigurer.namespace = AggregateApplication.getNamespace(appConfigurer.getApp().getName(), i);
+				appConfigurer.namespace = AggregateApplication.getNamespace(appConfigurer
+						.getApp().getName(), i);
 			}
 			appsToEmbed.put(appToEmbed, appConfigurer.namespace);
+			appConfigurers.put(appConfigurer, appConfigurer.namespace);
 		}
-		this.parentContext = AggregateApplication.createParentContext(this.parentSources.toArray(new Object[0]),
-					this.parentArgs.toArray(new String[0]), areAppsSelfContained());
-		SharedChannelRegistry sharedChannelRegistry = this.parentContext.getBean(SharedChannelRegistry.class);
-		AggregateApplication.prepareSharedChannelRegistry(sharedChannelRegistry, appsToEmbed);
+		this.parentContext = AggregateApplication.createParentContext(
+				this.parentSources.toArray(new Object[0]),
+				this.parentArgs.toArray(new String[0]), areAppsSelfContained());
+		PropertySources propertySources = this.parentContext.getEnvironment()
+				.getPropertySources();
+		for (Map.Entry<AppConfigurer, String> appConfigurerEntry : appConfigurers
+				.entrySet()) {
+			AppConfigurer appConfigurer = appConfigurerEntry.getKey();
+			String namespace = appConfigurerEntry.getValue().toLowerCase();
+			Set<String> argsToUpdate = new HashSet<>();
+			// Add the args that are set at the application level first.
+			if (appConfigurer.getArgs() != null) {
+				argsToUpdate.addAll(Arrays.asList(appConfigurer.getArgs()));
+			}
+			// Extract the namespace based prefixed properties specified via
+			// environment and command line.
+			for (PropertySource propertySource : propertySources) {
+				if (propertySource instanceof SystemEnvironmentPropertySource) {
+					extractFromEnvironment(
+							(SystemEnvironmentPropertySource) propertySource, namespace,
+							argsToUpdate);
+				}
+				else if (propertySource instanceof CommandLinePropertySource) {
+					extractFromCommandLine((CommandLinePropertySource) propertySource,
+							namespace, argsToUpdate);
+				}
+			}
+			if (!argsToUpdate.isEmpty()) {
+				appConfigurer.args(argsToUpdate.toArray(new String[0]));
+			}
+
+		}
+		SharedChannelRegistry sharedChannelRegistry = this.parentContext
+				.getBean(SharedChannelRegistry.class);
+		AggregateApplication.prepareSharedChannelRegistry(sharedChannelRegistry,
+				appsToEmbed);
 		for (int i = apps.size() - 1; i >= 0; i--) {
 			AppConfigurer<?> appConfigurer = apps.get(i);
 			appConfigurer.embed();
 		}
 		return this.parentContext;
+	}
+
+	private void extractFromCommandLine(CommandLinePropertySource propertySource,
+			String namespace, Set<String> argsList) {
+		for (String propertyName : propertySource.getPropertyNames()) {
+			if (propertyName.toLowerCase().startsWith(namespace + '.')) {
+				argsList.add("--"
+						+ propertyName.toLowerCase()
+								.substring((namespace + ".").length()) + "="
+						+ propertySource.getProperty(propertyName));
+			}
+		}
+	}
+
+	private void extractFromEnvironment(SystemEnvironmentPropertySource propertySource,
+			String namespace, Set<String> argsList) {
+		for (String propertyName : propertySource.getPropertyNames()) {
+			if (propertyName.toLowerCase().startsWith(namespace + '_')) {
+				argsList.add("--"
+						+ propertyName.toLowerCase()
+								.substring((namespace + '_').length()).replace('_', '-')
+						+ "=" + propertySource.getProperty(propertyName));
+			}
+		}
 	}
 
 	private boolean areAppsSelfContained() {
@@ -131,10 +197,9 @@ public class AggregateApplicationBuilder {
 
 	private ChildContextBuilder childContext(Class<?> app,
 			ConfigurableApplicationContext parentContext, String namespace) {
-		return new ChildContextBuilder(
-				AggregateApplication.embedApp(parentContext, namespace, app));
+		return new ChildContextBuilder(AggregateApplication.embedApp(parentContext,
+				namespace, app));
 	}
-
 
 	public class SourceConfigurer extends AppConfigurer<SourceConfigurer> {
 
@@ -228,6 +293,14 @@ public class AggregateApplicationBuilder {
 			childContext(this.app, AggregateApplicationBuilder.this.parentContext,
 					this.namespace).args(this.args).config(this.names)
 					.profiles(this.profiles).run();
+		}
+
+		public String[] getArgs() {
+			return this.args;
+		}
+
+		public String getNamespace() {
+			return this.namespace;
 		}
 	}
 
