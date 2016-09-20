@@ -18,19 +18,19 @@ package org.springframework.cloud.stream.aggregate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.bind.PropertySourcesPropertyValues;
+import org.springframework.boot.bind.RelaxedDataBinder;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.CommandLinePropertySource;
-import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
-import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.util.StringUtils;
 
 /**
@@ -133,22 +133,17 @@ public class AggregateApplicationBuilder {
 				.entrySet()) {
 			AppConfigurer appConfigurer = appConfigurerEntry.getKey();
 			String namespace = appConfigurerEntry.getValue().toLowerCase();
-			Set<String> argsToUpdate = new HashSet<>();
+			Set<String> argsToUpdate = new LinkedHashSet<>();
 			// Add the args that are set at the application level first.
 			if (appConfigurer.getArgs() != null) {
 				argsToUpdate.addAll(Arrays.asList(appConfigurer.getArgs()));
 			}
-			// Extract the namespace based prefixed properties specified via
-			// environment and command line.
-			for (PropertySource propertySource : propertySources) {
-				if (propertySource instanceof SystemEnvironmentPropertySource) {
-					extractFromEnvironment(
-							(SystemEnvironmentPropertySource) propertySource, namespace,
-							argsToUpdate);
-				}
-				else if (propertySource instanceof CommandLinePropertySource) {
-					extractFromCommandLine((CommandLinePropertySource) propertySource,
-							namespace, argsToUpdate);
+			final HashMap<String, String> target = new HashMap<>();
+			RelaxedDataBinder relaxedDataBinder = new RelaxedDataBinder(target, namespace);
+			relaxedDataBinder.bind(new PropertySourcesPropertyValues(propertySources));
+			if (!target.isEmpty()) {
+				for (Map.Entry<String, String> entry : target.entrySet()) {
+					argsToUpdate.add("--" + entry.getKey() + "="  + entry.getValue());
 				}
 			}
 			if (!argsToUpdate.isEmpty()) {
@@ -165,30 +160,6 @@ public class AggregateApplicationBuilder {
 			appConfigurer.embed();
 		}
 		return this.parentContext;
-	}
-
-	private void extractFromCommandLine(CommandLinePropertySource propertySource,
-			String namespace, Set<String> argsList) {
-		for (String propertyName : propertySource.getPropertyNames()) {
-			if (propertyName.toLowerCase().startsWith(namespace + '.')) {
-				argsList.add("--"
-						+ propertyName.toLowerCase()
-								.substring((namespace + ".").length()) + "="
-						+ propertySource.getProperty(propertyName));
-			}
-		}
-	}
-
-	private void extractFromEnvironment(SystemEnvironmentPropertySource propertySource,
-			String namespace, Set<String> argsList) {
-		for (String propertyName : propertySource.getPropertyNames()) {
-			if (propertyName.toLowerCase().startsWith(namespace + '_')) {
-				argsList.add("--"
-						+ propertyName.toLowerCase()
-								.substring((namespace + '_').length()).replace('_', '-')
-						+ "=" + propertySource.getProperty(propertyName));
-			}
-		}
 	}
 
 	private boolean areAppsSelfContained() {
