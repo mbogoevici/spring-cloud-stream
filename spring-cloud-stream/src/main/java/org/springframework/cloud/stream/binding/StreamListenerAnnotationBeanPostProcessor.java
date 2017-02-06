@@ -212,16 +212,17 @@ public class StreamListenerAnnotationBeanPostProcessor
 			if (targetReferenceValue != null) {
 				Assert.isInstanceOf(String.class, targetReferenceValue, "Annotation value must be a String");
 				Object targetBean = this.applicationContext.getBean((String) targetReferenceValue);
-				if (parameterType.isAssignableFrom(targetBean.getClass())) {
-					arguments[parameterIndex] = targetBean;
+				boolean adapted = false;
+				for (StreamListenerParameterAdapter<?, Object> streamListenerParameterAdapter : this.streamListenerParameterAdapters) {
+					if (streamListenerParameterAdapter.supports(targetBean.getClass(), methodParameter)) {
+						arguments[parameterIndex] = streamListenerParameterAdapter.adapt(targetBean, methodParameter);
+						adapted = true;
+						break;
+					}
 				}
-				else {
-					for (StreamListenerParameterAdapter<?, Object> streamListenerParameterAdapter : this.streamListenerParameterAdapters) {
-						if (streamListenerParameterAdapter.supports(targetBean.getClass(), methodParameter)) {
-							arguments[parameterIndex] = streamListenerParameterAdapter.adapt(targetBean,
-									methodParameter);
-							break;
-						}
+				if (!adapted) {
+					if (parameterType.isAssignableFrom(targetBean.getClass())) {
+						arguments[parameterIndex] = targetBean;
 					}
 				}
 				Assert.notNull(arguments[parameterIndex], "Cannot convert argument " + parameterIndex + " of " + method
