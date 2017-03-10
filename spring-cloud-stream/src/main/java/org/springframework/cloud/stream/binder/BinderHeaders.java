@@ -36,14 +36,19 @@ public final class BinderHeaders {
 	public static final String BINDER_ORIGINAL_CONTENT_TYPE = "originalContentType";
 
 	/**
-	 * Indicates the target partition of an outbound message. Binders must
-	 * observe this value when sending data on the transport.
+	 * Indicates the target partition of an outbound message.
+	 * Binders must observe this value when sending data on the transport.
+	 * This header is internally set by the framework when partitioning is
+	 * configured.
+	 * It may be overridden by {@link BinderHeaders#PARTITION_OVERRIDE} if set
+	 * by the user.
 	 */
 	public static final String PARTITION_HEADER = PREFIX + "partition";
 
 	/**
-	 * Indicates the target partition of an outbound message. Overrides
-	 * any partition selected by the binder.
+	 * Indicates the target partition of an outbound message.
+	 * Overrides any partition selected by the binder.
+	 * This header takes precedence over {@link BinderHeaders#PARTITION_HEADER}.
 	 */
 	public static final String PARTITION_OVERRIDE = PREFIX + "partitionOverride";
 
