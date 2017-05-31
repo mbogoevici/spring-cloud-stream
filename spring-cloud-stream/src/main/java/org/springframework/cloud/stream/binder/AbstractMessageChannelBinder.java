@@ -37,6 +37,7 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 
 /**
  * {@link AbstractBinder} that serves as base class for {@link MessageChannel} binders.
@@ -314,7 +315,13 @@ public abstract class AbstractMessageChannelBinder<C extends ConsumerProperties,
 				messageValues = deserializePayloadIfNecessary(messageValues);
 			}
 			else {
-				messageValues = deserializePayloadIfNecessary(requestMessage);
+				MimeType contentType = AbstractMessageChannelBinder.this.contentTypeResolver.resolve(requestMessage.getHeaders());
+				if (contentType != null && !MimeTypeUtils.APPLICATION_OCTET_STREAM.equals(contentType)) {
+					messageValues = deserializePayloadIfNecessary(requestMessage);
+				}
+				else {
+					return requestMessage;
+				}
 			}
 			return messageValues.toMessage();
 		}
