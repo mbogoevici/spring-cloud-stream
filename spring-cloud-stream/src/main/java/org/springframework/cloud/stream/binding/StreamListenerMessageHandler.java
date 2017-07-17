@@ -32,9 +32,12 @@ public class StreamListenerMessageHandler extends AbstractReplyProducingMessageH
 
 	private final boolean copyHeaders;
 
-	StreamListenerMessageHandler(InvocableHandlerMethod invocableHandlerMethod, boolean copyHeaders) {
+	StreamListenerMessageHandler(InvocableHandlerMethod invocableHandlerMethod, boolean copyHeaders,
+			String[] notPropagatedHeaders) {
+		super();
 		this.invocableHandlerMethod = invocableHandlerMethod;
 		this.copyHeaders = copyHeaders;
+		this.setNotPropagatedHeaders(notPropagatedHeaders);
 	}
 
 	@Override

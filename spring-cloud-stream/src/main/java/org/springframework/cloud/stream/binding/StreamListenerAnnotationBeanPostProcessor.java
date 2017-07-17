@@ -40,6 +40,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.cloud.stream.annotation.Input;
 import org.springframework.cloud.stream.annotation.Output;
 import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.cloud.stream.config.SpringIntegrationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -89,6 +90,9 @@ public class StreamListenerAnnotationBeanPostProcessor
 	@Autowired
 	@Lazy
 	private MessageHandlerMethodFactory messageHandlerMethodFactory;
+
+	@Autowired
+	private SpringIntegrationProperties springIntegrationProperties;
 
 	private ConfigurableApplicationContext applicationContext;
 
@@ -350,7 +354,8 @@ public class StreamListenerAnnotationBeanPostProcessor
 						.createInvocableHandlerMethod(mapping.getTargetBean(),
 								checkProxy(mapping.getMethod(), mapping.getTargetBean()));
 				StreamListenerMessageHandler streamListenerMessageHandler = new StreamListenerMessageHandler(
-						invocableHandlerMethod, resolveExpressionAsBoolean(mapping.getCopyHeaders(), "copyHeaders"));
+						invocableHandlerMethod, resolveExpressionAsBoolean(mapping.getCopyHeaders(), "copyHeaders"),
+						springIntegrationProperties.getMessageHandlerNotPropagatedHeaders());
 				streamListenerMessageHandler.setApplicationContext(this.applicationContext);
 				streamListenerMessageHandler.setBeanFactory(this.applicationContext.getBeanFactory());
 				if (StringUtils.hasText(mapping.getDefaultOutputChannel())) {
