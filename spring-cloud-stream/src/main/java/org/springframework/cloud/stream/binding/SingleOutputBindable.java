@@ -29,15 +29,20 @@ import java.util.Set;
  * @author Ilayaperumal Gopinathan
  * @author Marius Bogoevici
  */
-public class SingleBindingTargetBindable<T> extends BindableAdapter {
+public class SingleOutputBindable<T> extends BindableAdapter implements SingleTargetBindable<T> {
 
 	private final String name;
 
 	private final T bindingTarget;
 
-	public SingleBindingTargetBindable(String name, T bindingTarget) {
+	public SingleOutputBindable(String name, T bindingTarget) {
 		this.name = name;
 		this.bindingTarget = bindingTarget;
+	}
+
+	@Override
+	public T getTarget() {
+		return bindingTarget;
 	}
 
 	@Override

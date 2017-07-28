@@ -48,12 +48,12 @@ public interface Bindable {
 	void unbindOutputs(BindingService adapter);
 
 	/**
-	 * Enumerates all the input binding names.
+	 * Enumerates all the input binding names associated with this instance.
 	 */
 	Set<String> getInputs();
 
 	/**
-	 * Enumerates all the output binding names.
+	 * Enumerates all the output binding names associated with this instance.
 	 */
 	Set<String> getOutputs();
 
